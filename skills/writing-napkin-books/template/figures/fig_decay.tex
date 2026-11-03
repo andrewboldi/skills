@@ -1,0 +1,26 @@
+% Example of a computed figure: the curve is plotted from the formula in the text (eq:tour-decay) with the
+% numbers of the worked example (V0 = 5 V, tau = RC = 1 s), never drawn by hand.
+\begin{figure}[tbp]
+\centering
+\begin{tikzpicture}
+\begin{axis}[bookplot,width=0.74\linewidth,height=4.8cm,xmin=0,xmax=5.2,ymin=0,ymax=5.6,
+  xlabel={time $t$ (s)},ylabel={voltage $v$ (V)},
+  xtick={0,1,2,3,4,5},ytick={0,1,2,3,4,5},clip=false]
+  \addplot[navy,domain=0:5,samples=120] {5*exp(-x)};
+  % one time constant: 37 percent left
+  \addplot[only marks,mark=*,mark size=2pt,rose] coordinates {(1,1.8394)};
+  \draw[rose,dashed,line width=0.5pt] (axis cs:1,0) -- (axis cs:1,1.8394) -- (axis cs:0,1.8394);
+  \node[font=\sffamily\scriptsize,text=rose,anchor=west] at (axis cs:1.12,2.05) {$t=\tau$: \qty{1.84}{V}, \qty{37}{\percent} left};
+  % half-life: 50 percent left
+  \addplot[only marks,mark=*,mark size=2pt,teal] coordinates {(0.6931,2.5)};
+  \node[font=\sffamily\scriptsize,text=teal,anchor=west] at (axis cs:0.80,3.05) {$t_{1/2}=\tau\ln 2=\qty{0.69}{s}$: half left};
+  % three time constants: 5 percent left
+  \addplot[only marks,mark=*,mark size=2pt,amber] coordinates {(3,0.2489)};
+  \node[font=\sffamily\scriptsize,text=amber,anchor=south west] at (axis cs:3.05,0.35) {$t=3\tau$: \qty{0.25}{V}, \qty{5}{\percent} left};
+\end{axis}
+\end{tikzpicture}
+\caption{A \qty{100}{\micro\farad} capacitor charged to \qty{5}{V} discharging through \qty{10}{\kilo\ohm}
+($\tau=RC=\qty{1}{s}$), computed from \cref{eq:tour-decay}. Every interval of $\tau$ removes the same fraction,
+\qty{63}{\percent} of what is left. Original drawing.}
+\label{fig:tour-decay}
+\end{figure}

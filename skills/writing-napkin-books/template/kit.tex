@@ -1,0 +1,71 @@
+% ---------------------------------------------------------------------------
+%  Extras: lettered parts, units, circuit diagrams, plots, code listings and
+%  four more boxes (Example, Build it, Connection, Check yourself).
+%  The Key idea, Reading advice and Caution boxes are defined in preamble.tex.
+% ---------------------------------------------------------------------------
+
+% ---- lettered parts: chapters numbered C1, C2, ... ---------------------------------------
+% Use a lettered part to insert a block of chapters (a crash course, say) without renumbering
+% the chapters, labels and file names of the rest of the book:
+%   \letterpartbegin{C} \part{...} \input{chapters/cc01_...} ... \letterpartend
+% tools/build_chapter.sh numbers such files correctly when tools/book.env maps their prefix (cc:C).
+\newcounter{savedchapter}
+\newcommand{\letterpartbegin}[1]{%
+  \setcounter{savedchapter}{\value{chapter}}\setcounter{chapter}{0}%
+  \renewcommand{\thechapter}{#1\arabic{chapter}}\def\theHchapter{#1\arabic{chapter}}}
+\newcommand{\letterpartend}{%
+  \setcounter{chapter}{\value{savedchapter}}%
+  \renewcommand{\thechapter}{\arabic{chapter}}\def\theHchapter{\arabic{chapter}}}
+
+% ---- units (siunitx) ----------------------------------------------------------------
+\sisetup{per-mode=symbol,inter-unit-product=\ensuremath{{}\cdot{}},group-separator={\,},
+         group-minimum-digits=4,group-digits=integer,output-decimal-marker={.}}
+
+% ---- circuit diagrams (circuitikz, American symbols), only if installed ------------------
+% usage:  \begin{circuitikz}[ckt] ... \end{circuitikz}
+% Polarity trap: to[battery1] and the source symbols put + at the START of the path; add `invert` or draw the
+% path the other way, and check that current arrows leave the + terminal.
+\IfFileExists{circuitikz.sty}{%
+  \usepackage[american]{circuitikz}%
+  \ctikzset{bipoles/length=1.15cm}}{}
+\tikzset{ckt/.style={line width=0.7pt,font=\sffamily\footnotesize},
+         cur/.style={-{Stealth[length=2mm,width=1.6mm]},line width=0.9pt,draw=rose},
+         node dot/.style={circle,fill=black,inner sep=0.9pt}}
+
+% ---- plots (pgfplots) -------------------------------------------------------------------
+% usage:  \begin{axis}[bookplot, xlabel={...}, ylabel={...}] ... \end{axis}
+% Every curve is computed from the formula that the text uses, with the numbers of the worked example.
+\pgfplotsset{bookplot/.style={width=0.82\linewidth,height=5.2cm,axis lines=left,
+  tick label style={font=\sffamily\scriptsize},label style={font=\sffamily\footnotesize},
+  legend style={font=\sffamily\scriptsize,draw=none,fill=none},
+  every axis plot/.append style={line width=0.9pt},
+  title style={font=\sffamily\footnotesize}}}
+
+% ---- code listings (ASCII only inside listings) -----------------------------------------
+\lstdefinestyle{bookcode}{basicstyle=\ttfamily\footnotesize,columns=fullflexible,keepspaces=true,
+  keywordstyle=\bfseries\color{maroon},commentstyle=\itshape\color{teal},stringstyle=\color{amber},
+  showstringspaces=false,breaklines=true,frame=l,framerule=1.6pt,rulecolor=\color{navy!35},
+  xleftmargin=1.3em,framexleftmargin=0.7em,aboveskip=6pt,belowskip=6pt,numbers=none}
+\lstset{style=bookcode}
+
+% ---- boxes: Example (rust); Build it, Connection and Check yourself (green bar) -----
+%   \begin{workedbox}[title] ... \end{workedbox}        worked example with numbers
+%   \begin{buildbox}[title] ... \end{buildbox}          something to build, run or measure
+%   \begin{connectionbox}[title] ... \end{connectionbox} why the book's main topic cares (title in bookmeta.tex)
+%   \begin{checkbox} ... \end{checkbox}                 three short questions, answers in \footnotesize
+\NewDocumentEnvironment{workedbox}{O{}}{%
+  \calloutstart{boxB}{exborder}{Example}{#1}{{\color{exborder}\sffamily\bfseries\ ---\ }}%
+}{\end{tcolorbox}}
+\NewDocumentEnvironment{buildbox}{O{}}{%
+  \calloutstart{boxC}{remtitle}{Build it}{#1}{{\color{remtitle}\sffamily\bfseries\ ---\ }}%
+}{\end{tcolorbox}}
+\NewDocumentEnvironment{connectionbox}{O{}}{%
+  \calloutstart{boxC}{remtitle}{\connectionname}{#1}{{\color{remtitle}\sffamily\bfseries\ ---\ }}%
+}{\end{tcolorbox}}
+\NewDocumentEnvironment{checkbox}{O{}}{%
+  \calloutstart{boxC}{remtitle}{Check yourself}{#1}{{\color{remtitle}\sffamily\bfseries\ ---\ }}%
+}{\end{tcolorbox}}
+
+% ---- small math helpers ------------------------------------------------------------------
+\newcommand{\transp}{^{\top}}
+\newcommand{\dd}{\mathrm{d}}

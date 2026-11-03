@@ -1,0 +1,171 @@
+#!/usr/bin/env python3
+"""Generate the table of the appended papers (the papers part), the paper count and the merge order.
+
+usage: python3 -I tools/make_papers_listing.py --book-dir . --papers-dir papers --book-pages N
+
+Inputs : tools/data/cited_keys.json (tools/make_cited_keys.py), papers.tex (metadata of every arXiv paper),
+         tools/data/groups.tsv (how section codes are grouped in the table), refs_manual.bib (sources that are not
+         on arXiv), <papers-dir>/manifest.tsv (written by tools/fetch_papers.py).
+Outputs: papers_listing.tex  the table of the papers, grouped by theme, with the PDF page on which each one starts
+         volume_meta.tex     \\npapers, the number of papers
+         build/papers_order.json   the papers in merge order with their start pages (read by tools/build_volume.py)
+
+--book-pages is the number of pages of the book PDF (the pages before the first paper). The listing is part of the
+book, so tools/build_volume.sh runs this script, rebuilds the book, reads its page count and repeats until it is stable.
+"""
+import argparse
+import json
+import os
+import re
+
+STARS = {"A": r"\ding{72}\ding{72}\ding{72}", "B": r"\ding{72}\ding{72}", "C": r"\ding{72}"}
+KIND = {"online": "web page", "misc": "web page or model card", "article": "journal article",
+        "inproceedings": "conference paper", "book": "book", "incollection": "book chapter",
+        "thesis": "thesis", "report": "report", "manual": "documentation", "standard": "standard"}
+
+
+def read_groups(path):
+    """groups.tsv: group id, group name, comma-separated section codes (as in column 4 of candidates.tsv)."""
+    groups = []
+    for line in open(path, encoding="utf-8"):
+        if not line.strip() or line.startswith("#"):
+            continue
+        gid, name, secs = (line.rstrip("\n").split("\t") + ["", ""])[:3]
+        groups.append((gid, name, [s.strip() for s in secs.split(",") if s.strip()]))
+    return groups
+
+
+def read_meta(path):
+    meta = {}
+    for line in open(path, encoding="utf-8"):
+        m = re.match(r"\\expandafter\\def\\csname P@(\w+)@([^\\]+)\\endcsname\{(.*)\}\s*$", line)
+        if m:
+            meta.setdefault(m.group(2), {})[m.group(1)] = m.group(3)
+    return meta
+
+
+def read_manual(path):
+    entries = {}
+    text = open(path, encoding="utf-8").read()
+    for m in re.finditer(r"@(\w+)\{([^,]+),(.*?)\n\}\n", text, flags=re.S):
+        body = m.group(3)
+        t = re.search(r"title\s*=\s*\{((?:[^{}]|\{[^{}]*\})*)\}", body)
+        entries[m.group(2)] = {"type": m.group(1).lower(), "title": t.group(1) if t else m.group(2)}
+    return entries
+
+
+def card_keys(book):
+    keys = set()
+    cdir = os.path.join(book, "chapters")
+    for f in os.listdir(cdir):
+        if f.endswith(".tex"):
+            keys.update(re.findall(r"^[^%\n]*\\begin\{papercard\}\{([^}]+)\}",
+                                   open(os.path.join(cdir, f), encoding="utf-8").read(), flags=re.M))
+    return keys
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--book-dir", default=".")
+    ap.add_argument("--papers-dir", required=True)
+    ap.add_argument("--book-pages", type=int, required=True)
+    a = ap.parse_args()
+    g = a.book_dir
+    groups = read_groups(f"{g}/tools/data/groups.tsv")
+    cited = json.load(open(f"{g}/tools/data/cited_keys.json", encoding="utf-8"))
+    meta = read_meta(f"{g}/papers.tex")
+    plain = {v["id"]: re.sub(r"\s+", " ", v["title"]).strip()
+             for v in json.load(open(f"{g}/tools/data/arxiv_meta.json", encoding="utf-8")).values()}
+    manual = read_manual(f"{g}/refs_manual.bib")
+    cards = card_keys(g)
+    pages = {}
+    manifest = os.path.join(a.papers_dir, "manifest.tsv")
+    if os.path.exists(manifest):
+        for line in open(manifest, encoding="utf-8"):
+            f = line.rstrip("\n").split("\t")
+            if len(f) >= 5 and f[4] == "ok":
+                pages[f[0]] = int(f[2])
+    missing = [k for k in cited["arxiv"] if k not in pages]
+    if missing:
+        raise SystemExit(f"no downloaded PDF for: {missing} (run tools/fetch_papers.py)")
+    grouped = {s for _, _, secs in groups for s in secs}
+    ungrouped = sorted({meta[k]["sec"] for k in cited["arxiv"]} - grouped)
+    if ungrouped:
+        raise SystemExit(f"section codes missing from tools/data/groups.tsv: {ungrouped}")
+
+    order, start = [], a.book_pages + 1
+    for gid, gname, secs in groups:
+        keys = [k for k in cited["arxiv"] if meta[k]["sec"] in secs]
+        keys.sort(key=lambda k: cited["arxiv"][k])          # new-style arXiv ids sort chronologically
+        for k in keys:
+            order.append({"key": k, "arxiv": cited["arxiv"][k], "group": gid, "pages": pages[k], "start": start,
+                          "file": f"{k}_{cited['arxiv'][k]}.pdf", "title": meta[k]["title"],
+                          "plain_title": plain.get(cited["arxiv"][k], meta[k]["title"]), "card": k in cards})
+            start += pages[k]
+    total = sum(p["pages"] for p in order)
+
+    L = ["% AUTO-GENERATED by tools/make_papers_listing.py -- do not edit"]
+    if order:
+        word = "paper" if len(order) == 1 else "papers"
+        L.append(rf"\noindent {total:,} pages in {len(order)} {word}; the first starts on page {a.book_pages + 1} of this file.\par".replace(",", "{,}"))
+        L.append(r"\medskip")
+        L.append(r"\begingroup\small")
+        L.append(r"\makeatletter\let\blx@backref\@gobble\makeatother  % the listing is not a citation to record")
+        L.append(r"\setlength{\tabcolsep}{4pt}")
+        L.append(r"\begin{longtable}{@{}>{\raggedleft\arraybackslash}p{1.5em}>{\raggedright\arraybackslash}"
+                 r"p{\dimexpr\textwidth-1.5em-4.2em-4\tabcolsep\relax}>{\raggedleft\arraybackslash}p{4.2em}@{}}")
+        L.append(r"\toprule \# & Paper & {\scriptsize\sffamily PDF page} \\ \midrule \endfirsthead")
+        L.append(r"\toprule \# & Paper & {\scriptsize\sffamily PDF page} \\ \midrule \endhead")
+        L.append(r"\bottomrule \endlastfoot")
+        n = 0
+        for gid, gname, secs in groups:
+            rows = [p for p in order if p["group"] == gid]
+            if not rows:
+                continue
+            L.append(r"\addlinespace[9pt]")
+            L.append(rf"\multicolumn{{3}}{{@{{}}p{{\textwidth}}@{{}}}}{{\sffamily\bfseries\color{{crimson}}{gid}\quad {gname}"
+                     rf"\hfill{{\normalfont\color{{black}}{len(rows)} paper{'s' if len(rows) != 1 else ''}}}}}\\*[2pt]")
+            for p in rows:
+                n += 1
+                k = p["key"]
+                m = meta[k]
+                card = ""
+                if p["card"]:
+                    card = rf"\ \textperiodcentered\ card \hyperref[card:{k}]{{p.\,\pageref*{{card:{k}}}}}"
+                L.append(
+                    rf"{n} & {{\hypersetup{{linkcolor=black}}\hyperlink{{paperpage:{k}}}{{\bfseries {m['title']}}}}}\newline"
+                    rf"{{\scriptsize\sffamily\color{{slate}}{m['auth']}\ \textperiodcentered\ {m['date']}\ \textperiodcentered\ "
+                    rf"\cite{{{k}}}\ \textperiodcentered\ \href{{https://arxiv.org/abs/{p['arxiv']}}}{{arXiv:{p['arxiv']}}}{card}"
+                    rf"\ \textperiodcentered\ \textcolor{{crimson}}{{{STARS[m['tier']]}}}}} & "
+                    rf"\hyperlink{{paperpage:{k}}}{{\sffamily\bfseries {p['start']}}} \\[1pt]")
+        L.append(r"\end{longtable}")
+        L.append(r"\endgroup")
+    else:
+        L.append(r"\noindent\emph{No arXiv papers are cited yet.}\par")
+
+    if cited["manual"]:
+        L.append(r"\section*{Sources that are not included}")
+        L.append(r"Cited in the book but not on arXiv, so there is no paper to include.\par")
+        L.append(r"\begingroup\footnotesize\setlength{\tabcolsep}{4pt}")
+        L.append(r"\makeatletter\let\blx@backref\@gobble\makeatother")
+        L.append(r"\begin{longtable}{@{}>{\raggedright\arraybackslash}p{\dimexpr\textwidth-7.2em-4\tabcolsep\relax}"
+                 r">{\raggedright\arraybackslash}p{7.2em}@{}}")
+        L.append(r"\toprule Source & Kind \\ \midrule \endhead \bottomrule \endlastfoot")
+        for k in cited["manual"]:
+            e = manual[k]
+            L.append(rf"{e['title']}\ \cite{{{k}}} & {KIND.get(e['type'], e['type'])} \\")
+        L.append(r"\end{longtable}")
+        L.append(r"\endgroup")
+    open(f"{g}/papers_listing.tex", "w", encoding="utf-8").write("\n".join(L) + "\n")
+    open(f"{g}/volume_meta.tex", "w", encoding="utf-8").write(
+        f"% AUTO-GENERATED by tools/make_papers_listing.py -- do not edit\n"
+        f"\\renewcommand{{\\npapers}}{{{len(order)}}}\n")
+    os.makedirs(f"{g}/build", exist_ok=True)
+    json.dump({"guide_pages": a.book_pages, "group_names": {gid: gname for gid, gname, _ in groups}, "papers": order},
+              open(f"{g}/build/papers_order.json", "w", encoding="utf-8"), indent=1)
+    print(f"{len(order)} papers, {total} pages, first paper at page {a.book_pages + 1}; "
+          f"{len(cited['manual'])} sources not included")
+
+
+if __name__ == "__main__":
+    main()

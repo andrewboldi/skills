@@ -1,0 +1,4 @@
+# key	arxiv_id	tier	section	short_name
+# One row per arXiv paper, tab-separated. key: the bibliography key used in \cite and papercard (lowercase, e.g.
+# vaswani2017attention); tier: A = essential, B = important, C = context; section: a code listed in groups.tsv.
+# Add rows with tools/add_arxiv.py (it fetches the metadata and regenerates papers.tex and refs_auto.bib).

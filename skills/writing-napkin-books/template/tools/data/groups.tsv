@@ -1,0 +1,7 @@
+# group_id	group_name	section_codes
+# How the appended papers are grouped in the table of the papers part (and in the bookmarks), in this order.
+# section_codes: comma-separated codes from column 4 of candidates.tsv. Replace the examples with the book's own.
+A	Foundations	found,bg
+B	Core methods	core
+C	Applications	app
+D	Benchmarks and surveys	bench,survey

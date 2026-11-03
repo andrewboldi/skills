@@ -1,0 +1,127 @@
+% TEMPLATE EXEMPLAR of a crash-course chapter: it uses every element once (opening, goals, sections, run-in
+% paragraphs, equation, Key idea, Example, figure, table, Caution, Connection, Build it with a tested listing,
+% Check yourself, Further reading). Copy its shape; delete it when the book's first real chapter exists, and
+% change the \cref{ch:tour} in chapters/preface.tex.
+% Labels: <type>:<chapter slug>-<name>, e.g. sec:tour-rc, fig:tour-decay (tools/check.sh enforces the types).
+\chapter{Exponential Decay in One Sitting}
+\label{ch:tour}
+
+A capacitor emptying through a resistor, the charge of a battery left on a shelf, the weight that a running
+average gives to old samples, the step size of many learning-rate schedules: all of them shrink the same way. Each
+loses the same \emph{fraction} of what is left in every equal stretch of time, and that one rule gives a curve you
+will meet in every chapter that follows. This chapter takes one sitting. It needs nothing beyond the exponential
+function from high-school algebra. By the end you should be able to
+
+\begin{itemize}
+  \item say what a time constant and a half-life are, and convert one into the other;
+  \item predict how much of a decaying quantity is left after any time, without a calculator for the common cases;
+  \item compute the time constant of a resistor and a capacitor, and of a running average.
+\end{itemize}
+
+\section{One rule, one curve}
+\label{sec:tour-curve}
+
+A quantity \emph{decays exponentially} when, in every interval of the same length, it loses the same fraction of
+its current value. If a quantity $v$ starts at $V_0$, the rule gives
+\begin{equation}
+  v(t) = V_0\, e^{-t/\tau},
+  \label{eq:tour-decay}
+\end{equation}
+where $\tau$ (the Greek letter tau) is the \emph{time constant}, measured in seconds. After one time constant
+$e^{-1}\approx 0.37$ of the start is left, so the quantity has lost \qty{63}{\percent}.
+
+\paragraph{Half-life.} The \emph{half-life} $t_{1/2}$ is the time after which half is left. Setting
+$e^{-t/\tau}=1/2$ gives $t_{1/2}=\tau\ln 2\approx0.69\,\tau$: the half-life is a little shorter than the time
+constant, and both describe the same curve (\cref{fig:tour-decay}).
+
+\begin{insightbox}[The decay rule]
+\[
+  v(t)=V_0\,e^{-t/\tau},\qquad t_{1/2}=\tau\ln 2\approx 0.69\,\tau .
+\]
+After $\tau$, $2\tau$, $3\tau$ and $5\tau$, about \qty{37}{\percent}, \qty{14}{\percent}, \qty{5}{\percent} and
+\qty{0.7}{\percent} of the start is left (\cref{tab:tour-fractions}).
+\end{insightbox}
+
+\input{figures/fig_decay}
+
+\section{A capacitor that empties}
+\label{sec:tour-rc}
+
+A \emph{capacitor} stores electric charge; the voltage across it is proportional to the charge it holds. Connect a
+charged capacitor $C$ (in farads, \unit{\farad}) across a resistor $R$ (in ohms, \unit{\ohm}) and the current that
+flows through the resistor drains the charge. The more charge is left, the higher the voltage and the faster the
+current, so the voltage falls by the same fraction in every equal interval: it decays exponentially, with time
+constant $\tau=RC$ \cite{horowitz2015art}.
+
+\begin{workedbox}[How long until it is empty?]
+A \qty{100}{\micro\farad} capacitor charged to \qty{5}{V} discharges through \qty{10}{\kilo\ohm}. The time
+constant is
+\[
+  \tau = RC = \qty{10000}{\ohm}\times\qty{100e-6}{\farad} = \qty{1.0}{s}.
+\]
+After \qty{1}{s} the voltage is $5\times0.37=\qty{1.84}{V}$; after \qty{3}{s}, $5\times e^{-3}=\qty{0.25}{V}$. To
+fall to \qty{1}{V}, solve $5\,e^{-t/\tau}=1$: $t=\tau\ln 5=\qty{1.6}{s}$. A decaying quantity never reaches zero,
+so ``empty'' always means ``below a threshold you choose''; five time constants (\qty{0.7}{\percent} left) is a
+common choice.
+\end{workedbox}
+
+\begin{table}[tbp]
+\centering
+\small
+\caption{The fraction $e^{-t/\tau}$ left after whole multiples of the time constant, and the voltage of the
+worked example ($V_0=\qty{5}{V}$, $\tau=\qty{1}{s}$).}
+\label{tab:tour-fractions}
+\begin{tabular}{@{}rrr@{}}
+\toprule
+$t$ & fraction left & voltage \\
+\midrule
+$\tau$  & \qty{36.8}{\percent} & \qty{1.84}{V} \\
+$2\tau$ & \qty{13.5}{\percent} & \qty{0.68}{V} \\
+$3\tau$ & \qty{5.0}{\percent}  & \qty{0.25}{V} \\
+$5\tau$ & \qty{0.67}{\percent} & \qty{0.03}{V} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{cautionbox}[A charged capacitor can bite]
+A capacitor keeps its charge after the circuit is switched off, and large ones, such as those inside power supplies,
+can hold enough energy to burn or shock. Do not open a power supply. On your own low-voltage circuits, discharge a
+large capacitor through a resistor of a few hundred ohms and check with a meter before you touch it; never short it
+with a screwdriver.
+\end{cautionbox}
+
+\begin{connectionbox}[Running averages decay too]
+An exponential moving average $\bar x_t=\beta\,\bar x_{t-1}+(1-\beta)\,x_t$ weights a sample $k$ steps old by
+$(1-\beta)\beta^k$. For $\beta$ close to 1, $\beta^k\approx e^{-k(1-\beta)}$, so the weights decay with a time
+constant of about $1/(1-\beta)$ steps: $\beta=0.99$ averages over roughly the last 100 steps.
+\end{connectionbox}
+
+\begin{buildbox}[Compute the curve yourself]
+This Python snippet tabulates \cref{eq:tour-decay} for the worked example.
+\begin{lstlisting}[language=Python]
+import math
+
+R, C, V0 = 10e3, 100e-6, 5.0       # ohms, farads, volts
+tau = R * C                         # time constant, seconds
+for t in (0.0, 0.5, 1.0, 2.0, 3.0):
+    v = V0 * math.exp(-t / tau)
+    print(f"t = {t:3.1f} s   v = {v:4.2f} V")
+print(f"half-life = {tau * math.log(2):.3f} s")
+\end{lstlisting}
+It prints \texttt{5.00}, \texttt{3.03}, \texttt{1.84}, \texttt{0.68} and \texttt{0.25}~V, and a half-life of
+\texttt{0.693}~s.
+\end{buildbox}
+
+\begin{checkbox}
+(1)~A quantity has $\tau=\qty{2}{s}$. What fraction is left after \qty{6}{s}? (2)~A half-life is \qty{10}{min}.
+What is $\tau$? (3)~What is the time constant of a running average with $\beta=0.9$?
+
+{\footnotesize Answers: (1)~$6/2=3$ time constants, $e^{-3}\approx\qty{5}{\percent}$. (2)~$\tau=t_{1/2}/\ln2
+\approx\qty{14.4}{min}$. (3)~About $1/(1-0.9)=10$ steps.\par}
+\end{checkbox}
+
+\begin{readingbox}[Further reading]
+The first chapter of Horowitz and Hill~\cite{horowitz2015art} treats resistor-capacitor circuits and their time
+constant, with the engineer's rules of thumb. This chapter left out the mirror image, exponential approach to a
+final value ($v=V_f+(V_0-V_f)e^{-t/\tau}$), which follows from the same rule.
+\end{readingbox}

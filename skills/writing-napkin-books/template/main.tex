@@ -1,0 +1,32 @@
+\input{preamble}
+\begin{document}
+
+\frontmatter
+\input{chapters/titlepage}
+\input{chapters/preface}
+\clearpage\pdfbookmark[0]{Contents}{contents}
+\tableofcontents
+
+\mainmatter
+\renewcommand{\thesection}{\thechapter.\arabic{section}}
+% Replace the two example parts with the book's own. Give every part a \label{part:...}.
+\part{Getting Started}\label{part:start}
+\input{chapters/ch01_template_tour}
+
+\part{The Literature}\label{part:literature}
+\input{chapters/ch02_reading_example}
+
+% A block of chapters numbered with a letter (C1, C2, ...) that does not renumber the others:
+%   \letterpartbegin{C}
+%   \part{A Crash Course}\label{part:course}
+%   \input{chapters/cc01_first_topic}
+%   \letterpartend
+
+\appendix
+\input{chapters/appendix_glossary}
+
+\backmatter
+\printbibliography[heading=bibintoc,title={Bibliography}]
+\input{chapters/papers_part}   % the list of appended papers; delete this line if the book appends none
+
+\end{document}

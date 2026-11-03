@@ -1,0 +1,53 @@
+% TEMPLATE EXEMPLAR of a reading-guide chapter: a short narrative that leads into paper cards. Cards say what a
+% paper does (Idea), what it showed (Results, with the authors' numbers attributed to them), why it matters and
+% its limits. Delete this chapter when the book's own literature chapters exist.
+%
+% arXiv papers use papercard; register them first (key, arXiv id, tier A/B/C, section code, short name):
+%   printf 'vaswani2017attention\t1706.03762\tA\tfound\tTransformer\n' > /tmp/rows.tsv
+%   python3 -I tools/add_arxiv.py /tmp/rows.tsv
+% and then
+%   \begin{papercard}{vaswani2017attention}{Transformer}
+%   \cl{Idea.} ...  \cl{Results.} ...  \cl{Why it matters.} ...  \cl{Limits.} ...
+%   \end{papercard}
+% Sources without arXiv metadata use webcard and an entry in refs_manual.bib (checked before it is added):
+%   \begin{webcard}{bibkey}{Display name}{Full title}{meta line}{tier}
+\chapter{Reading the Literature}
+\label{ch:reading}
+
+A reading guide is only as useful as its advice on how to read. This chapter shows the two kinds of card the book
+uses and the method behind them: each card tells you what a work does, why it matters and what to read it for, so
+that you can decide in a minute whether to open it. The tier, shown by the stars and by the shape of the box, says
+how much of the field rests on it.
+
+\section{How to read a paper}
+\label{sec:reading-how}
+
+Most papers do not need to be read from the first line to the last. A short article by Keshav turned that
+observation into a method.
+
+\begin{webcard}{keshav2007read}{Three-pass reading}{How to Read a Paper}{S.~Keshav \textperiodcentered\ 2007 (ACM SIGCOMM Computer Communication Review)}{A}
+\cl{Idea.} Read a paper in up to three passes. The first, of five to ten minutes, gives a bird's-eye view: the title,
+abstract and introduction, the section headings and the conclusions. The second, of up to an hour, takes in the
+content but skips details such as proofs. The third tries to ``virtually re-implement the paper'', making the
+authors' assumptions and re-creating the work.
+\cl{Why it matters.} It turns ``read everything'' into a decision after each pass, and the first pass ends with five
+questions (category, context, correctness, contributions, clarity) that make a good skeleton for a reading note.
+\cl{Limits.} The time budgets are the author's experience, not measurements: he puts the third pass at four or five
+hours for a beginner and about an hour for an experienced reader.
+\end{webcard}
+
+\section{Where this book's look comes from}
+\label{sec:reading-look}
+
+\begin{webcard}{chen2024napkin}{The Napkin}{An Infinitely Large Napkin}{Evan Chen \textperiodcentered\ project page, version 1.6}{C}
+\cl{Idea.} In its author's words, ``a light and mostly self-contained introduction to higher math'', from the
+undergraduate syllabus to first-year graduate topics, that gives a bird's-eye view of the main ideas of each field.
+\cl{Why it matters here.} Its typography (bold sans-serif headings, crimson numerals, a blue box for what matters
+most, a rust box for examples, a green bar for remarks) is the model for the look of this book, which uses none of
+its text or artwork.
+\end{webcard}
+
+\begin{readingbox}
+Read the first pass of every Essential card's paper before the second pass of any of them: the map of the field
+comes first.
+\end{readingbox}

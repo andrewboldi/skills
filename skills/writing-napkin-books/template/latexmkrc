@@ -1,0 +1,12 @@
+# Build settings: latexmk -interaction=nonstopmode -halt-on-error main.tex  ->  build/main.pdf
+#
+# TEXMFVAR points at an empty, build-local directory. A stale per-user font map (for example in
+# ~/.texlive20XX/texmf-var) can make pdfTeX die with "Font ... not found"; with a private TEXMFVAR,
+# pdfTeX falls back to the complete system-wide map. Nothing outside this folder is touched.
+use Cwd;
+my $tv = getcwd() . "/build/texmfvar";
+system("mkdir -p '$tv'");
+$ENV{'TEXMFVAR'} = $tv;
+$pdf_mode = 1;
+$out_dir = 'build';
+$bibtex_use = 2;

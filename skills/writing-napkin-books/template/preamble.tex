@@ -1,0 +1,288 @@
+% ---------------------------------------------------------------------------
+%  Preamble of the book. The typography follows Evan Chen's "An Infinitely
+%  Large Napkin": Latin Modern 11pt, bold sans-serif headings, maroon links and
+%  contents, crimson chapter numerals and section signs, a blue rounded box for
+%  the most important items, a rust box for examples, a green bar for remarks.
+%  Book-specific settings live in bookmeta.tex; extra boxes and tools in kit.tex.
+% ---------------------------------------------------------------------------
+\documentclass[paper=letter,fontsize=11pt,twoside,open=any,headings=normal,
+               numbers=noenddot]{scrbook}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage[letterpaper,left=1.3in,right=1.3in,top=1.15in,bottom=1.1in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{microtype}
+\usepackage{xurl}
+\usepackage{mathtools,bm}
+\usepackage{booktabs,array,tabularx,longtable,multirow,makecell,colortbl}
+\usepackage{enumitem}
+\usepackage{pifont}
+\usepackage{etoolbox}
+\usepackage{needspace}
+\usepackage{xspace}
+\usepackage{xcolor}
+\usepackage{graphicx}
+\usepackage[font=small,labelfont={sf,bf},labelsep=period,justification=raggedright,singlelinecheck=false]{caption}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,shapes.geometric,shapes.misc,calc,fit,backgrounds,decorations.pathreplacing,decorations.pathmorphing,matrix}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.17}
+\usepackage{siunitx}
+\usepackage{listings}
+\usepackage[most]{tcolorbox}
+\usepackage[backend=biber,style=alphabetic,maxalphanames=3,minalphanames=3,sorting=anyt,
+            maxbibnames=6,minbibnames=3,giveninits=true,doi=false,isbn=false,url=true,eprint=true,
+            backref=true,urldate=long]{biblatex}
+\DefineBibliographyStrings{english}{backrefpage={p.\addnbspace},backrefpages={pp.\addnbspace}}
+\DeclareFieldFormat{labelalpha}{\mdseries #1}  % citation labels stay in medium weight inside bold table cells
+\renewcommand*{\finentrypunct}{}
+\renewcommand*{\mkbibnamefamily}[1]{\textsc{#1}}  % family names in small caps, as in the Napkin's bibliography
+
+\addbibresource{refs_auto.bib}
+\addbibresource{refs_manual.bib}
+
+% \fillin{...}: a visible red marker for text that still has to be written. tools/check.sh fails while any remain.
+\newcommand{\fillin}[1]{\textcolor{red}{\textbf{[FILL IN: #1]}}}
+\input{bookmeta}
+
+\usepackage[colorlinks=true,linkcolor=maroon,citecolor=citegreen,urlcolor=blue,
+            pdftitle={\booktitle},pdfauthor={\bookauthor},pdfsubject={\booksubject},pdfkeywords={\bookkeywords},
+            bookmarksnumbered=true,breaklinks=true]{hyperref}
+\usepackage{bookmark}
+\usepackage[nameinlink,noabbrev]{cleveref}
+
+% ---- colors (the Napkin's palette) ------------------------------------------
+\definecolor{maroon}{HTML}{800000}      % links, contents, headings accents
+\definecolor{crimson}{HTML}{BF0040}     % chapter numerals, section signs
+\definecolor{citegreen}{RGB}{0,128,0}   % citations
+\definecolor{propborder}{HTML}{0000FF}  % "Proposition" box
+\definecolor{propfill}{HTML}{F4FBFA}
+\definecolor{proptitle}{HTML}{07608F}
+\definecolor{exborder}{HTML}{94340E}    % "Example" box
+\definecolor{exfill}{HTML}{FEF8F7}
+\definecolor{rembar}{HTML}{159B52}      % "Remark" box
+\definecolor{remtitle}{HTML}{3D8252}
+\definecolor{remfill}{HTML}{F2F9F2}
+% names used by the figures
+\colorlet{navy}{proptitle}
+\colorlet{teal}{remtitle}
+\colorlet{amber}{exborder}
+\colorlet{rose}{crimson}
+\definecolor{slate}{HTML}{595959}
+\definecolor{mist}{HTML}{F4FBFA}
+\definecolor{sand}{HTML}{FEF3EC}
+\definecolor{line}{HTML}{C8C8C8}
+% reading tiers: A essential (blue box), B important (rust box), C context (green bar)
+\colorlet{tierA}{proptitle}
+\colorlet{tierB}{exborder}
+\colorlet{tierC}{remtitle}
+
+% ---- text layout -----------------------------------------------------------
+\setcounter{tocdepth}{2}
+\setcounter{secnumdepth}{3}
+\setlength{\parindent}{11.5pt}
+\setlength{\parskip}{0pt plus 0.5pt}
+\raggedbottom
+\makeatletter
+\setlength{\@fptop}{0pt}\setlength{\@fpsep}{14pt plus 1fil}\setlength{\@fpbot}{0pt plus 1fil}
+\makeatother
+\renewcommand{\topfraction}{0.85}\renewcommand{\bottomfraction}{0.75}
+\renewcommand{\textfraction}{0.12}\renewcommand{\floatpagefraction}{0.85}
+\setlength{\emergencystretch}{2em}
+\clubpenalty=10000
+\widowpenalty=10000
+\setlist{nosep,leftmargin=1.8em,itemsep=3pt,topsep=4pt}
+\renewcommand{\arraystretch}{1.1}
+\let\cleardoublepage\clearpage  % no blank verso pages (\mainmatter and \frontmatter use \cleardoubleoddpage)
+\let\cleardoubleoddpage\clearpage
+
+% ---- headings (KOMA), after the Napkin ---------------------------------------
+\renewcommand*{\thesubsection}{\thesection.\roman{subsection}}
+\renewcommand*{\thesubsubsection}{\thesubsection.\alph{subsubsection}}
+\setkomafont{disposition}{\sffamily\bfseries}
+\setkomafont{part}{\normalfont\bfseries\fontsize{24}{28}\selectfont\color{black}}
+\setkomafont{partnumber}{\normalfont\bfseries\fontsize{56}{60}\selectfont\color{crimson}}
+\setkomafont{chapter}{\sffamily\bfseries\fontsize{24}{28}\selectfont}
+\setkomafont{section}{\sffamily\bfseries\Large}
+\setkomafont{subsection}{\sffamily\bfseries\normalsize}
+\setkomafont{subsubsection}{\sffamily\bfseries\normalsize}
+\setkomafont{paragraph}{\normalfont\bfseries}
+\setkomafont{pageheadfoot}{\normalfont\small}
+\setkomafont{pagenumber}{\normalfont\small}
+\renewcommand*{\partformat}{\thepart}
+\renewcommand*{\raggedpart}{\centering}
+\renewcommand*{\partheadstartvskip}{\vspace*{0.24\textheight}}
+\renewcommand*{\partheadmidvskip}{\par\nobreak\vspace{0.9\baselineskip}}
+\renewcommand*{\chapterformat}{{\color{crimson}\fontsize{54}{54}\selectfont\thechapter}\hspace{0.45em}}
+\renewcommand*{\chapterheadstartvskip}{\vspace*{-0.5\baselineskip}}
+\renewcommand*{\chapterheadendvskip}{\vspace{1.5\baselineskip}}
+\renewcommand*{\sectionformat}{\textcolor{crimson}{\S\thesection}\enskip}
+\renewcommand*{\subsectionformat}{\textcolor{crimson}{\S\thesubsection}\enskip}
+\renewcommand*{\subsubsectionformat}{\textcolor{crimson}{\S\thesubsubsection}\enskip}
+\RedeclareSectionCommand[beforeskip=2.3\baselineskip plus 4pt minus 2pt,afterskip=0.75\baselineskip plus 2pt]{section}
+\RedeclareSectionCommand[beforeskip=1.6\baselineskip plus 3pt minus 2pt,afterskip=0.55\baselineskip plus 1pt]{subsection}
+\RedeclareSectionCommand[beforeskip=1.2\baselineskip plus 2pt minus 1pt,afterskip=0.4\baselineskip]{subsubsection}
+\RedeclareSectionCommand[indent=0pt,beforeskip=0.9\baselineskip plus 2pt minus 1pt,
+                         afterskip=-0.5em]{paragraph}
+
+% ---- running heads and feet --------------------------------------------------
+\usepackage[headwidth=\textwidth,footwidth=\textwidth]{scrlayer-scrpage}
+\pagestyle{scrheadings}
+\clearpairofpagestyles
+\automark[chapter]{chapter}
+\renewcommand*{\chaptermarkformat}{\thechapter\enskip}
+\lehead{\pagemark}
+\rehead{\textsf{\textbf{\bookshorttitle}}, compiled with \emph{Claude} (\bookversion)}
+\lohead{\headmark}
+\rohead{\pagemark}
+\cfoot[\pagemark]{}
+\KOMAoptions{headsepline=0.6pt}
+
+% keep section headings with the box that follows them
+\pretocmd{\section}{\Needspace{9\baselineskip}}{}{\PackageWarning{preamble}{could not patch \string\section}}
+\pretocmd{\subsection}{\Needspace{7\baselineskip}}{}{\PackageWarning{preamble}{could not patch \string\subsection}}
+
+% ---- table of contents: maroon entries, black page numbers ------------------
+\makeatletter\renewcommand*{\@pnumwidth}{2.3em}\makeatother  % room for three bold digits
+\DeclareTOCStyleEntry[indent=0pt,numwidth=46pt,beforeskip=1.5em plus 2pt,linefill=\hfill,
+                      entryformat=\sffamily\bfseries\large\color{maroon},
+                      pagenumberformat=\sffamily\bfseries\large\color{black}]{tocline}{part}
+\DeclareTOCStyleEntry[indent=0pt,numwidth=46pt,beforeskip=0.75em plus 1pt,linefill=\hfill,
+                      entryformat=\sffamily\bfseries\color{maroon},
+                      pagenumberformat=\sffamily\bfseries\color{black}]{tocline}{chapter}
+\DeclareTOCStyleEntry[indent=17pt,numwidth=35pt,beforeskip=0pt,
+                      entryformat=\color{maroon},
+                      pagenumberformat=\color{black}]{tocline}{section}
+
+\providecommand{\npapers}{0}
+\input{volume_meta}   % generated by tools/make_papers_listing.py; must exist so that latexmk tracks it
+
+% ---- tiers / paper database -----------------------------------------------
+\input{papers.tex}                         % generated by tools/build_meta.py (do not edit)
+
+\csdef{P@stars@A}{\ding{72}\ding{72}\ding{72}}
+\csdef{P@stars@B}{\ding{72}\ding{72}}
+\csdef{P@stars@C}{\ding{72}}
+\csdef{P@word@A}{ESSENTIAL}
+\csdef{P@word@B}{IMPORTANT}
+\csdef{P@word@C}{CONTEXT}
+
+\newcommand{\pfield}[2]{\csname P@#1@#2\endcsname}              % \pfield{title}{key}
+\newcommand{\ptier}[1]{\csname P@tier@#1\endcsname}
+\newcommand{\pcolor}[1]{pc@#1}
+\newcommand{\pstars}[1]{\csname P@stars@\csname P@tier@#1\endcsname\endcsname}
+\newcommand{\pword}[1]{\csname P@word@\csname P@tier@#1\endcsname\endcsname}
+\newcommand{\arxivlink}[1]{\href{https://arxiv.org/abs/\pfield{arx}{#1}}{arXiv:\pfield{arx}{#1}}}
+
+% Card label (run-in heading inside a paper card), in the color of the box
+\colorlet{cardcolor}{tierA}
+\newcommand{\cl}[1]{\par\noindent\textsf{\textbf{\color{cardcolor}#1}}\enspace}
+
+\newcommand{\metaline}[1]{%
+  \pfield{auth}{#1}%
+  \ \textperiodcentered\ \pfield{date}{#1}%
+  \ifcsempty{P@venue@#1}{}{\ (\pfield{venue}{#1})}%
+  \ifcsempty{P@org@#1}{}{\expandafter\ifx\csname P@org@#1\endcsname\csname P@auth@#1\endcsname\else\ \textperiodcentered\ \pfield{org}{#1}\fi}%
+  \ \textperiodcentered\ \arxivlink{#1}%
+  \ \textperiodcentered\ \cite{#1}}
+
+% ---- boxes -------------------------------------------------------------------
+% One counter for every box, reset in each section, as in the Napkin ("Paper 5.2.1", "Example 5.2.2").
+\newcounter{nbox}[section]
+\renewcommand{\thenbox}{\thesection.\arabic{nbox}}
+
+\tcbset{
+  napkin/.style={enhanced jigsaw,breakable,left=10pt,right=10pt,top=6pt,bottom=7pt,
+      before skip=8pt plus 2pt,after skip=10pt plus 2pt,
+      before upper={\parindent=0pt\parskip=3pt\relax}},
+  boxA/.style={napkin,arc=7pt,boxrule=1.1pt,colframe=propborder,colback=propfill},
+  boxB/.style={napkin,sharp corners,boxrule=0.7pt,colframe=exborder,colback=exfill},
+  boxC/.style={napkin,sharp corners,boxrule=0pt,frame hidden,colback=remfill,
+      borderline west={2.6pt}{0pt}{rembar}},
+  boxR/.style={napkin,sharp corners,boxrule=0pt,frame hidden,colback=crimson!6,
+      borderline west={2.6pt}{0pt}{crimson}},
+}
+
+% little samples of the three card boxes, for the legend of the reading tiers
+\newcommand{\swatchA}{\tikz[baseline=-0.55ex]{\draw[propborder,fill=propfill,line width=0.8pt,rounded corners=2pt] (0,-0.9ex) rectangle (2.6em,1.5ex);}}
+\newcommand{\swatchB}{\tikz[baseline=-0.55ex]{\draw[exborder,fill=exfill,line width=0.6pt] (0,-0.9ex) rectangle (2.6em,1.5ex);}}
+\newcommand{\swatchC}{\tikz[baseline=-0.55ex]{\fill[remfill] (0,-0.9ex) rectangle (2.6em,1.5ex);\fill[rembar] (0,-0.9ex) rectangle (0.28em,1.5ex);}}
+
+% Paper card, common part: \cardbegin{tier}{bibkey}{name}{full title}{meta line}
+\newcommand{\cardbegin}[5]{%
+  \Needspace{7\baselineskip}%
+  \begin{tcolorbox}[box#1]%
+  \colorlet{cardcolor}{tier#1}%
+  \refstepcounter{nbox}\label{card:#2}%
+  {\color{cardcolor}\sffamily\bfseries Paper~\thenbox}{\color{cardcolor}\sffamily\ (#3)}%
+  \hfill{\color{crimson}\small\csname P@stars@#1\endcsname}\par
+  \vspace{1pt}%
+  {\small\itshape #4\par}%
+  {\footnotesize\sffamily\color{slate}#5\par}%
+  \vspace{1pt}{\color{cardcolor!45}\hrule height 0.4pt}\vspace{3pt}%
+}
+
+% \begin{papercard}{bibkey}{Display name} ... \end{papercard}    (arXiv papers registered with tools/add_arxiv.py)
+\NewDocumentEnvironment{papercard}{m m}{%
+  \ifcsname P@title@#1\endcsname\else\PackageError{papercard}{Unknown paper key #1}{Add it with tools/add_arxiv.py}\fi
+  \edef\cardtier{\csname P@tier@#1\endcsname}%
+  \expandafter\cardbegin\expandafter{\cardtier}{#1}{#2}{\pfield{title}{#1}}{\metaline{#1}}%
+}{\end{tcolorbox}}
+
+% Card for sources without arXiv metadata (books, journal-only papers, blog posts, model cards):
+%   \begin{webcard}{bibkey}{Display name}{Full title}{meta line}{A|B|C}     (bibkey lives in refs_manual.bib)
+\NewDocumentEnvironment{webcard}{m m m m m}{%
+  \cardbegin{#5}{#1}{#2}{#3}{#4\ \textperiodcentered\ \cite{#1}}%
+}{\end{tcolorbox}}
+
+% Callouts: insightbox (blue box), readingbox and cautionbox (bar boxes with a run-in title)
+%   \begin{insightbox}[optional title] ... \end{insightbox}
+% The \Needspace below keeps a box title from being stranded at the bottom of a page. Do NOT lower it globally to
+% fix one bad page break: every box in the book moves and the whole book repaginates. Fix single pages locally
+% (\enlargethispage, a shorter sentence, moving a float).
+\NewDocumentCommand{\calloutstart}{m m m m +m}{% style, accent color, type, title, what follows the title
+  \Needspace{6\baselineskip}%
+  \begin{tcolorbox}[#1]%
+  \refstepcounter{nbox}%
+  {\color{#2}\sffamily\bfseries #3~\thenbox}%
+  \IfBlankTF{#4}{}{{\color{#2}\sffamily\ (#4)}}%
+  #5%
+}
+\NewDocumentEnvironment{insightbox}{O{}}{%
+  \calloutstart{boxA,unbreakable}{proptitle}{Key idea}{#1}{\par\vspace{1pt}}%
+}{\end{tcolorbox}}
+\NewDocumentEnvironment{readingbox}{O{}}{%
+  \calloutstart{boxC}{remtitle}{Reading advice}{#1}{{\color{remtitle}\sffamily\bfseries\ ---\ }}%
+}{\end{tcolorbox}}
+\NewDocumentEnvironment{cautionbox}{O{}}{%
+  \calloutstart{boxR}{crimson}{Caution}{#1}{{\color{crimson}\sffamily\bfseries\ ---\ }}%
+}{\end{tcolorbox}}
+
+% ---- TikZ styles -----------------------------------------------------------
+\tikzset{
+  blk/.style={draw=navy!70,fill=white,rounded corners=2pt,minimum height=7mm,inner sep=3pt,
+              font=\sffamily\scriptsize,align=center,line width=0.6pt},
+  blkfill/.style={blk,fill=mist},
+  blkamber/.style={blk,draw=amber,fill=sand},
+  blkteal/.style={blk,draw=teal,fill=teal!8},
+  blkrose/.style={blk,draw=rose,fill=rose!8},
+  flow/.style={-{Stealth[length=2.2mm,width=1.8mm]},line width=0.6pt,draw=slate},
+  lab/.style={font=\sffamily\tiny,text=slate,inner sep=1pt},
+}
+
+\newcolumntype{C}{>{\centering\arraybackslash}X}
+
+% ---- misc macros -----------------------------------------------------------
+\DeclareMathOperator*{\argmin}{arg\,min}
+\DeclareMathOperator*{\argmax}{arg\,max}
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\tick}{\textcolor{teal}{\ding{51}}}
+\newcommand{\cross}{\textcolor{rose}{\ding{55}}}
+\newcommand{\sref}[1]{\hyperref[#1]{\S\ref*{#1}}}
+
+\input{kit}     % worked/build/connection/check boxes, units, plots, code listings, lettered parts
+
+% hyphenation help for the book's own vocabulary, e.g. \hyphenation{data-set fine-tun-ing}

@@ -1,0 +1,16 @@
+build/
+build.log
+*.aux
+*.log
+*.fls
+*.fdb_latexmk
+*.bbl
+*.blg
+*.run.xml
+*.bcf
+*.out
+*.toc
+
+# Large downloaded or generated artifacts (rebuild with tools/fetch_papers.py and tools/build_volume.sh)
+papers/
+*_with_papers.pdf

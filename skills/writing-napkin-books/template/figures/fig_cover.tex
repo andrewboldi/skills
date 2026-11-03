@@ -1,0 +1,61 @@
+% Cover art: a Napkin-style collage (watercolor washes, spheres, hatched streaks, plus marks, a lettered sticker).
+% Drawn with a fixed pseudo-random seed, so the picture is identical on every build. Replace or add motifs that
+% belong to the book's topic (a robotics book might draw a robot arm, a cup, a camera lens and a speech bubble); keep the
+% sticker text short enough to fit (check the rendered title page).
+\begin{tikzpicture}[x=0.55in,y=0.55in]
+  \pgfmathsetseed{20261103}
+  \clip (0,0) rectangle (10,10);
+  % paper and faint graph lines
+  \fill[teal!8!white] (0,0) rectangle (10,10);
+  \foreach \i in {1,...,19} {
+    \draw[teal!28!white,line width=0.25pt] (\i*0.5,0) -- (\i*0.5,10);
+    \draw[teal!28!white,line width=0.25pt] (0,\i*0.5) -- (10,\i*0.5);
+  }
+  % big washes
+  \shade[inner color=violet!35!white,outer color=violet!70!blue!85,opacity=0.95] (1.9,7.7) circle (2.55);
+  \shade[inner color=teal!40!white,outer color=teal!85!cyan!95,opacity=0.95] (1.2,1.4) circle (2.95);
+  \shade[inner color=magenta!15!white,outer color=magenta!45!white,opacity=0.95] (8.4,1.6) circle (2.7);
+  \shade[inner color=yellow!40!white,outer color=yellow!85!orange,opacity=0.9] (3.3,4.6) circle (1.2);
+  % spheres
+  \shade[ball color=orange!90!yellow] (6.75,7.0) circle (1.25);
+  \shade[ball color=violet!70!blue] (8.0,8.35) circle (1.35);
+  \shade[ball color=red!75!black] (0.9,3.35) circle (0.5);
+  % hatched streaks
+  \foreach \i in {0,...,52} {
+    \pgfmathsetmacro{\hh}{1.9+1.6*rnd}
+    \draw[magenta!60!purple,opacity=0.45,line width=0.9pt] (6.4+\i*0.07,0) -- ++(0,\hh);
+  }
+  \foreach \i in {0,...,22} {
+    \pgfmathsetmacro{\hh}{0.9+0.9*rnd}
+    \draw[blue!65!cyan,opacity=0.3,line width=0.9pt] (3.0+\i*0.06,9.9) -- ++(0.9*\hh,-0.7*\hh);
+  }
+  % small watercolor strokes
+  \foreach \i in {1,...,160} {
+    \pgfmathsetmacro{\sx}{10*rnd}
+    \pgfmathsetmacro{\sy}{10*rnd}
+    \pgfmathsetmacro{\sa}{360*rnd}
+    \draw[white,opacity=0.10,line width=2.2pt] (\sx,\sy) -- ++(\sa:0.7);
+  }
+  % plus marks, as on the Napkin
+  \foreach \i in {0,...,5} {
+    \foreach \j in {0,...,2} {
+      \draw[white,line width=0.5pt,opacity=0.8] (0.45+\i*0.55,1.55+\j*0.45) -- ++(0.14,0) (0.52+\i*0.55,1.48+\j*0.45) -- ++(0,0.14);
+    }
+  }
+  % a band of decaying waves (replace with a motif of the topic)
+  \foreach \k/\sc in {0/crimson,1/blue!75!black,2/orange!90!yellow,3/green!55!black,4/violet,5/cyan!70!blue} {
+    \pgfmathsetmacro{\ph}{\k*37}
+    \draw[\sc,line width=1.1pt,opacity=0.9] plot[domain=0:10,samples=140,smooth]
+      ({\x},{2.6+0.12*\k+1.3*exp(-0.25*\x)*sin(95*\x+\ph)});
+  }
+  % sticker with the title
+  \begin{scope}[rotate around={-4:(5,5)}]
+    \fill[white,opacity=0.94,rounded corners=14pt] (1.4,4.1) rectangle (8.6,6.3);
+    \draw[black,line width=1.4pt,rounded corners=14pt] (1.4,4.1) rectangle (8.6,6.3);
+    \foreach \a in {0,45,...,315} {
+      \node[font=\sffamily\bfseries\fontsize{30}{32}\selectfont,text=black] at (5+0.045*cos \a,5.35+0.045*sin \a) {\bookshorttitle};
+    }
+    \node[font=\sffamily\bfseries\fontsize{30}{32}\selectfont,text=white] at (5,5.35) {\bookshorttitle};
+    \node[font=\itshape\fontsize{10.5}{12}\selectfont,text=black!70] at (5,4.45) {a study book};
+  \end{scope}
+\end{tikzpicture}

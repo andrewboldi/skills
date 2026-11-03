@@ -1,0 +1,3 @@
+# key	venue	org
+# Only confirmed values: the arXiv comment or journal-ref field, a Crossref record or the proceedings page (say
+# which in provenance/). venue: "ICML 2024", "Nature 2023"; org: the lab or company, only for lab-owned systems.

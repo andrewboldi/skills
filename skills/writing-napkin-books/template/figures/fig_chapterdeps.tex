@@ -1,0 +1,23 @@
+% Chapter dependencies, in the style of the chart in the Napkin's "Advice for the reader".
+% Solid arrow: read first. Dotted arrow: optional or partial dependency. Thick box: the short reading path.
+% One node per chapter (or per block of a lettered part); nodes link to their chapters.
+\begin{center}
+\begingroup
+\hypersetup{linkcolor=black}
+\begin{tikzpicture}[x=1cm,y=0.86cm,
+  cn/.style={draw=black,fill=yellow!20!white,rounded corners=2.5pt,line width=0.5pt,inner sep=2.5pt,
+             minimum width=3.45cm,minimum height=0.92cm,align=center,font=\small},
+  key/.style={line width=1.5pt},
+  dep/.style={-{Stealth[length=2.1mm,width=1.6mm]},line width=0.45pt},
+  opt/.style={-{Stealth[length=2.1mm,width=1.6mm]},line width=0.55pt,dash pattern=on 0.3pt off 2.2pt,line cap=round},
+  hdr/.style={font=\sffamily\bfseries\footnotesize,text=crimson,anchor=south}]
+  \node[hdr] at (2.0,1.25) {Part~\ref{part:start}};
+  \node[hdr] at (7.4,1.25) {Part~\ref{part:literature}};
+  \node[cn,key] (c1) at (2.0,0) {{\scriptsize\textbf{Ch \ref*{ch:tour}}}\\\hyperref[ch:tour]{Exponential decay}};
+  \node[cn,key] (c2) at (7.4,0) {{\scriptsize\textbf{Ch \ref*{ch:reading}}}\\\hyperref[ch:reading]{Reading the literature}};
+  \node[cn]     (g)  at (12.8,0) {{\scriptsize\textbf{App.\ \ref*{app:glossary}}}\\\hyperref[app:glossary]{Glossary}};
+  \draw[dep] (c1) -- (c2);
+  \draw[opt] (c2) -- (g);
+\end{tikzpicture}
+\endgroup
+\end{center}

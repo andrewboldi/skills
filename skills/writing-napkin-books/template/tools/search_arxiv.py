@@ -25,7 +25,7 @@ def run(query, n):
         "search_query": query, "start": 0, "max_results": n,
         "sortBy": "submittedDate", "sortOrder": "descending"})
     req = urllib.request.Request("https://export.arxiv.org/api/query?" + qs,
-                                 headers={"User-Agent": "study-book-tools/0.1 (personal research)"})
+                                 headers={"User-Agent": "napkin-book-tools/0.1 (personal research)"})
     with urllib.request.urlopen(req, timeout=60) as r:
         root = ET.fromstring(r.read())
     out = []

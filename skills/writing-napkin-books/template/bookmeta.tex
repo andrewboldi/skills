@@ -5,12 +5,14 @@
 % ---------------------------------------------------------------------------
 \newcommand{\booktitle}{BOOK TITLE}
 \newcommand{\booksubtitle}{\fillin{subtitle, e.g.\ a reading guide, with a crash course in X}}
-\newcommand{\bookshorttitle}{SHORT TITLE}            % running head on even pages
+\newcommand{\bookshorttitle}{SHORT TITLE}            % running head on even pages, and the cover sticker
+\newcommand{\bookcoverline}{\fillin{cover line}}      % small line under the title on the cover, e.g. a reading guide
 \newcommand{\bookauthor}{Compiled with Claude}
 \newcommand{\bookdate}{BOOK DATE}                     % American style: November 3, 2026
 \newcommand{\bookversion}{v1.0.BOOKSTAMP}             % bump on every delivered rebuild
 \newcommand{\booksubject}{BOOK TITLE}                 % PDF metadata
 \newcommand{\bookkeywords}{}                          % PDF metadata, comma-separated
-% Title of the "connection" box (kit.tex): why a reader who cares about the book's main topic
-% should care about this section, e.g. "Robotics connection" or "Clinical connection".
+% Title of the "connection" box (kit.tex): it links a section to the book's main application or to a neighboring
+% field, e.g. "Robotics connection" or "Clinical connection". If every chapter is already about the main topic,
+% name it for what it points to instead, e.g. "Related idea" or "In practice".
 \newcommand{\connectionname}{Connection}

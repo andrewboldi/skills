@@ -13,7 +13,7 @@ it and (optionally) append the cited arXiv papers into one linked PDF.
 ```bash
 latexmk -interaction=nonstopmode -halt-on-error main.tex     # output: build/main.pdf
 bash tools/check.sh                                          # regression checks; exit 0 = release-ready
-bash tools/build_chapter.sh chapters/ch01_template_tour.tex --png   # one chapter, with page images
+bash tools/build_chapter.sh chapters/<file>.tex --png       # one chapter, with page images
 bash tools/contact_sheets.sh build/main.pdf build/qa         # every page, 12 to a sheet, for a visual pass
 ```
 

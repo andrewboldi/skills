@@ -1,7 +1,12 @@
 % Cover art: a Napkin-style collage (watercolor washes, spheres, hatched streaks, plus marks, a lettered sticker).
 % Drawn with a fixed pseudo-random seed, so the picture is identical on every build. Replace or add motifs that
-% belong to the book's topic (a robotics book might draw a robot arm, a cup, a camera lens and a speech bubble); keep the
-% sticker text short enough to fit (check the rendered title page).
+% belong to the book's topic (a robotics book might draw a robot arm, a cup, a camera lens and a speech bubble).
+% Coordinates run from (0,0) to (10,10). The sticker covers x 1.4-8.6, y 4.1-6.3 (turned by -4 degrees about (5,5)),
+% so keep motifs below y 3.7 or above y 6.7. The short title is scaled down to fit the sticker automatically; a
+% title longer than about 22 characters gets small, so shorten \bookshorttitle instead.
+\ifdefined\coverbox\else\newsavebox{\coverbox}\fi%
+\sbox{\coverbox}{\sffamily\bfseries\fontsize{30}{32}\selectfont\bookshorttitle}%
+\pgfmathsetmacro{\coverscale}{min(1,240/\the\wd\coverbox)}%   240pt: the width of the sticker less its margins
 \begin{tikzpicture}[x=0.55in,y=0.55in]
   \pgfmathsetseed{20261103}
   \clip (0,0) rectangle (10,10);
@@ -53,9 +58,9 @@
     \fill[white,opacity=0.94,rounded corners=14pt] (1.4,4.1) rectangle (8.6,6.3);
     \draw[black,line width=1.4pt,rounded corners=14pt] (1.4,4.1) rectangle (8.6,6.3);
     \foreach \a in {0,45,...,315} {
-      \node[font=\sffamily\bfseries\fontsize{30}{32}\selectfont,text=black] at (5+0.045*cos \a,5.35+0.045*sin \a) {\bookshorttitle};
+      \node[text=black,inner sep=0pt] at (5+0.045*cos \a,5.35+0.045*sin \a) {\scalebox{\coverscale}{\usebox{\coverbox}}};
     }
-    \node[font=\sffamily\bfseries\fontsize{30}{32}\selectfont,text=white] at (5,5.35) {\bookshorttitle};
-    \node[font=\itshape\fontsize{10.5}{12}\selectfont,text=black!70] at (5,4.45) {a study book};
+    \node[text=white,inner sep=0pt] at (5,5.35) {\scalebox{\coverscale}{\usebox{\coverbox}}};
+    \node[font=\itshape\fontsize{10.5}{12}\selectfont,text=black!70] at (5,4.45) {\bookcoverline};
   \end{scope}
 \end{tikzpicture}

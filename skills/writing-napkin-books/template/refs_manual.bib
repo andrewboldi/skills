@@ -2,6 +2,13 @@
 % blog posts, model cards. Every entry is checked against a publisher, library, Crossref or official page before it
 % is added (record how in provenance/). arXiv papers go through tools/add_arxiv.py instead (refs_auto.bib).
 % Web sources: @online with url, urldate (the access date) and, if the page gives one, a date.
+% No DOI (many journals, books, standards): use the publisher's page and its BibTeX export, record the URL in
+% provenance/, and never fill in a DOI from memory. Entries print only if they are cited.
+%
+% The three entries below were checked before they went into the template: chen2024napkin against the project page
+% (version 1.6) and the GitHub tag v1.6.0, and keshav2007read against Crossref and the article's PDF, on November 3,
+% 2026; horowitz2015art against Open Library and the Cambridge University Press listing, on October 28, 2026.
+% Re-check any you keep.
 
 @online{chen2024napkin,
   author  = {Chen, Evan},

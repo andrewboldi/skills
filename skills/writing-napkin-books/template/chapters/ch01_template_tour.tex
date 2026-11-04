@@ -1,7 +1,9 @@
 % TEMPLATE EXEMPLAR of a crash-course chapter: it uses every element once (opening, goals, sections, run-in
 % paragraphs, equation, Key idea, Example, figure, table, Caution, Connection, Build it with a tested listing,
-% Check yourself, Further reading). Copy its shape; delete it when the book's first real chapter exists, and
-% change the \cref{ch:tour} in chapters/preface.tex.
+% Check yourself, Further reading). Copy its shape, then replace it with the book's first chapter (git mv it to the
+% new name and overwrite it). Its labels are also used in main.tex, chapters/preface.tex,
+% chapters/appendix_glossary.tex and figures/fig_chapterdeps.tex; find them all with
+%   grep -rn -E 'ch:(tour|reading)|part:(start|literature)|fig_decay' main.tex chapters figures
 % Labels: <type>:<chapter slug>-<name>, e.g. sec:tour-rc, fig:tour-decay (tools/check.sh enforces the types).
 \chapter{Exponential Decay in One Sitting}
 \label{ch:tour}
@@ -59,7 +61,7 @@ constant is
 \[
   \tau = RC = \qty{10000}{\ohm}\times\qty{100e-6}{\farad} = \qty{1.0}{s}.
 \]
-After \qty{1}{s} the voltage is $5\times0.37=\qty{1.84}{V}$; after \qty{3}{s}, $5\times e^{-3}=\qty{0.25}{V}$. To
+After \qty{1}{s} the voltage is $5\times e^{-1}=5\times0.368=\qty{1.84}{V}$; after \qty{3}{s}, $5\times e^{-3}=\qty{0.25}{V}$. To
 fall to \qty{1}{V}, solve $5\,e^{-t/\tau}=1$: $t=\tau\ln 5=\qty{1.6}{s}$. A decaying quantity never reaches zero,
 so ``empty'' always means ``below a threshold you choose''; five time constants (\qty{0.7}{\percent} left) is a
 common choice.
@@ -97,17 +99,9 @@ constant of about $1/(1-\beta)$ steps: $\beta=0.99$ averages over roughly the la
 \end{connectionbox}
 
 \begin{buildbox}[Compute the curve yourself]
-This Python snippet tabulates \cref{eq:tour-decay} for the worked example.
-\begin{lstlisting}[language=Python]
-import math
-
-R, C, V0 = 10e3, 100e-6, 5.0       # ohms, farads, volts
-tau = R * C                         # time constant, seconds
-for t in (0.0, 0.5, 1.0, 2.0, 3.0):
-    v = V0 * math.exp(-t / tau)
-    print(f"t = {t:3.1f} s   v = {v:4.2f} V")
-print(f"half-life = {tau * math.log(2):.3f} s")
-\end{lstlisting}
+This Python snippet (\texttt{figures/src/tour\_decay.py}; its output is saved next to it, and
+\texttt{tools/check.sh} reruns it) tabulates \cref{eq:tour-decay} for the worked example.
+\lstinputlisting[language=Python]{figures/src/tour_decay.py}
 It prints \texttt{5.00}, \texttt{3.03}, \texttt{1.84}, \texttt{0.68} and \texttt{0.25}~V, and a half-life of
 \texttt{0.693}~s.
 \end{buildbox}

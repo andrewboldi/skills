@@ -20,7 +20,7 @@ def post(ids):
     body = json.dumps({"ids": ["ARXIV:" + i for i in ids]}).encode()
     req = urllib.request.Request(URL, data=body, headers={
         "Content-Type": "application/json",
-        "User-Agent": "study-book-tools/0.1 (personal research)"})
+        "User-Agent": "napkin-book-tools/0.1 (personal research)"})
     for attempt in range(6):
         try:
             with urllib.request.urlopen(req, timeout=90) as r:

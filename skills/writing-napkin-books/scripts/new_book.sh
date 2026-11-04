@@ -44,7 +44,13 @@ open(p, "w", encoding="utf-8").write(s)
 p = f"{dest}/tools/book.env"
 s = open(p, encoding="utf-8").read().replace("BOOK_FILE_NAME", fname)
 open(p, "w", encoding="utf-8").write(s)
+p = f"{dest}/README.md"
+s = open(p, encoding="utf-8").read().replace("<BOOK_NAME>", fname).replace("# Book sources", f"# {title}: sources")
+open(p, "w", encoding="utf-8").write(s)
 print(f"title: {title}\nshort title: {short}\ndate: {date_us}\noutput: {fname}.pdf")
+if len(short) > 22:
+    print(f"WARNING: the short title has {len(short)} characters; the running head and the cover sticker work best "
+          "with 22 or fewer (edit \\bookshorttitle in bookmeta.tex)")
 EOF
 
 if git -C "$dest" rev-parse --is-inside-work-tree >/dev/null 2>&1; then

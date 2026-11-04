@@ -210,13 +210,14 @@
 \newcommand{\swatchB}{\tikz[baseline=-0.55ex]{\draw[exborder,fill=exfill,line width=0.6pt] (0,-0.9ex) rectangle (2.6em,1.5ex);}}
 \newcommand{\swatchC}{\tikz[baseline=-0.55ex]{\fill[remfill] (0,-0.9ex) rectangle (2.6em,1.5ex);\fill[rembar] (0,-0.9ex) rectangle (0.28em,1.5ex);}}
 
-% Paper card, common part: \cardbegin{tier}{bibkey}{name}{full title}{meta line}
+% Paper card, common part: \cardbegin{tier}{bibkey}{name}{full title}{meta line}; \cardkind is the heading word
+\newcommand{\cardkind}{Paper}
 \newcommand{\cardbegin}[5]{%
   \Needspace{7\baselineskip}%
   \begin{tcolorbox}[box#1]%
   \colorlet{cardcolor}{tier#1}%
   \refstepcounter{nbox}\label{card:#2}%
-  {\color{cardcolor}\sffamily\bfseries Paper~\thenbox}{\color{cardcolor}\sffamily\ (#3)}%
+  {\color{cardcolor}\sffamily\bfseries \cardkind~\thenbox}{\color{cardcolor}\sffamily\ (#3)}%
   \hfill{\color{crimson}\small\csname P@stars@#1\endcsname}\par
   \vspace{1pt}%
   {\small\itshape #4\par}%
@@ -232,9 +233,11 @@
 }{\end{tcolorbox}}
 
 % Card for sources without arXiv metadata (books, journal-only papers, blog posts, model cards):
-%   \begin{webcard}{bibkey}{Display name}{Full title}{meta line}{A|B|C}     (bibkey lives in refs_manual.bib)
-\NewDocumentEnvironment{webcard}{m m m m m}{%
-  \cardbegin{#5}{#1}{#2}{#3}{#4\ \textperiodcentered\ \cite{#1}}%
+%   \begin{webcard}[Kind]{bibkey}{Display name}{Full title}{meta line}{A|B|C}   (bibkey lives in refs_manual.bib)
+% Kind is the heading word: Paper (the default), Book, Article, Post, Model card, ...
+\NewDocumentEnvironment{webcard}{O{Paper} m m m m m}{%
+  \def\cardkind{#1}%
+  \cardbegin{#6}{#2}{#3}{#4}{#5\ \textperiodcentered\ \cite{#2}}%
 }{\end{tcolorbox}}
 
 % Callouts: insightbox (blue box), readingbox and cautionbox (bar boxes with a run-in title)

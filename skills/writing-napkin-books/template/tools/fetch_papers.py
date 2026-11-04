@@ -17,7 +17,7 @@ import sys
 import time
 
 MIN_FREE_GB = 3.0
-UA = "study-book-tools/0.1 (personal research)"
+UA = "napkin-book-tools/0.1 (personal research)"
 
 
 def pdf_pages(path):

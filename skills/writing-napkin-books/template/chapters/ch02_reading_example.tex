@@ -1,6 +1,7 @@
 % TEMPLATE EXEMPLAR of a reading-guide chapter: a short narrative that leads into paper cards. Cards say what a
 % paper does (Idea), what it showed (Results, with the authors' numbers attributed to them), why it matters and
-% its limits. Delete this chapter when the book's own literature chapters exist.
+% its limits. Replace this chapter with the book's own literature chapters (see ch01_template_tour.tex for where
+% its labels are used).
 %
 % arXiv papers use papercard; register them first (key, arXiv id, tier A/B/C, section code, short name):
 %   printf 'vaswani2017attention\t1706.03762\tA\tfound\tTransformer\n' > /tmp/rows.tsv
@@ -10,7 +11,8 @@
 %   \cl{Idea.} ...  \cl{Results.} ...  \cl{Why it matters.} ...  \cl{Limits.} ...
 %   \end{papercard}
 % Sources without arXiv metadata use webcard and an entry in refs_manual.bib (checked before it is added):
-%   \begin{webcard}{bibkey}{Display name}{Full title}{meta line}{tier}
+%   \begin{webcard}[Kind]{bibkey}{Display name}{Full title}{meta line}{tier}
+% Kind is the word in the card's heading ("Paper" if omitted; e.g. Book, Article, Post, Model card).
 \chapter{Reading the Literature}
 \label{ch:reading}
 
@@ -39,15 +41,10 @@ hours for a beginner and about an hour for an experienced reader.
 \section{Where this book's look comes from}
 \label{sec:reading-look}
 
-\begin{webcard}{chen2024napkin}{The Napkin}{An Infinitely Large Napkin}{Evan Chen \textperiodcentered\ project page, version 1.6}{C}
+\begin{webcard}[Book]{chen2024napkin}{The Napkin}{An Infinitely Large Napkin}{Evan Chen \textperiodcentered\ project page, version 1.6}{C}
 \cl{Idea.} In its author's words, ``a light and mostly self-contained introduction to higher math'', from the
 undergraduate syllabus to first-year graduate topics, that gives a bird's-eye view of the main ideas of each field.
 \cl{Why it matters here.} Its typography (bold sans-serif headings, crimson numerals, a blue box for what matters
 most, a rust box for examples, a green bar for remarks) is the model for the look of this book, which uses none of
 its text or artwork.
 \end{webcard}
-
-\begin{readingbox}
-Read the first pass of every Essential card's paper before the second pass of any of them: the map of the field
-comes first.
-\end{readingbox}

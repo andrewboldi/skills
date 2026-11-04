@@ -27,7 +27,7 @@ def squash(s):
 def fetch_chunk(ids):
     url = ("https://export.arxiv.org/api/query?max_results=%d&id_list=%s"
            % (len(ids), ",".join(ids)))
-    req = urllib.request.Request(url, headers={"User-Agent": "study-book-tools/0.1 (personal research)"})
+    req = urllib.request.Request(url, headers={"User-Agent": "napkin-book-tools/0.1 (personal research)"})
     for attempt in range(8):
         try:
             with urllib.request.urlopen(req, timeout=60) as r:

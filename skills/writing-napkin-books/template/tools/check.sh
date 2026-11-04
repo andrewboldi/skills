@@ -7,7 +7,8 @@ G="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$G" || exit 2
 source tools/book.env
 fail=0
-note() { echo "NOTE: $*"; }
+notes=0
+note() { echo "NOTE: $*"; notes=$((notes+1)); }
 bad()  { echo "FAIL: $*"; fail=1; }
 
 echo "== 1. build"
@@ -30,12 +31,16 @@ EOF
 then echo "  ok"; else bad "undefined citations/references, labels defined twice, or labels that changed (rerun latexmk)"; fi
 
 echo "== 3. overfull boxes wider than 1pt"
-python3 -I - "$LOG" <<'EOF'
+if python3 -I - "$LOG" <<'EOF'
 import re, sys
 log = open(sys.argv[1], encoding="utf-8", errors="replace").read()
-big = [float(m.group(1)) for m in re.finditer(r"Overfull \\hbox \(([0-9.]+)pt too wide", log) if float(m.group(1)) > 1.0]
-print(f"  {len(big)} overfull hbox(es) > 1pt" + (f": {big[:8]}" if big else ""))
+big = [(float(m.group(1)), m.group(2).strip()[:70]) for m in
+       re.finditer(r"Overfull \\hbox \(([0-9.]+)pt too wide\)[^\n]*\n([^\n]*)", log) if float(m.group(1)) > 1.0]
+print(f"  {len(big)} overfull hbox(es) > 1pt")
+for w, t in big[:8]: print(f"   {w:6.1f}pt  {t}")
+sys.exit(1 if big else 0)
 EOF
+then echo "  ok"; else bad "lines stick out into the margin (rephrase, \\allowbreak, or use tabularx)"; fi
 
 echo "== 4. spelling (SPELLING=$SPELLING)"
 if [ "$SPELLING" = "american" ]; then
@@ -51,12 +56,32 @@ pdftotext -layout build/main.pdf build/main.txt
 if python3 -I - <<'EOF'
 import re, sys
 t = open("build/main.txt", encoding="utf-8").read()
-hits = re.findall(r".{0,30}(?:TODO|FIXME|XXX|\?\?|FILL IN).{0,30}", t)
-for h in hits[:12]: print("  ", repr(h))
-print(f"  {len(hits)} placeholder(s)")
+hits = re.findall(r".{0,40}(?:TODO|FIXME|XXX|\?\?|FILL IN).{0,50}", t)
+for h in hits[:40]: print("  ", " ".join(h.split()))
+print(f"  {len(hits)} placeholder(s); find their sources with: grep -rn 'fillin' bookmeta.tex chapters figures")
 sys.exit(1 if hits else 0)
 EOF
 then echo "  ok"; else bad "placeholder text in the PDF (\\fillin markers, ?? from missing labels, TODO)"; fi
+
+echo "== 5b. the book claims only checks that were done"
+if python3 -I - <<'EOF'
+import glob, re, sys
+t = " ".join(open("build/main.txt", encoding="utf-8").read().split())
+t = re.sub(r"\[FILL IN:[^\]]*\]", " ", t)          # placeholders are reported by check 5
+claims = []
+for m in re.finditer(r"fact-check|independent(?:ly)? check|independent reader", t, flags=re.I):
+    before = t[max(0, m.start() - 50):m.start()]
+    if re.search(r"\b(?:no|not|never|without|none|nobody)\b", before.split(".")[-1], flags=re.I):
+        continue                                 # "no independent reader has checked the text" is an honest disclosure
+    claims.append(t[max(0, m.start() - 40):m.end() + 40])
+reports = [f for f in glob.glob("provenance/factcheck/*.md")]
+if claims and not reports:
+    for c in claims[:5]: print("  ", c)
+    print("  the book mentions fact-checks, but provenance/factcheck/ holds no report")
+    sys.exit(1)
+print(f"  {len(claims)} mention(s) of checks, {len(reports)} report(s) in provenance/factcheck/")
+EOF
+then echo "  ok"; else bad "describe only the checks that were actually done (or add the reports)"; fi
 
 echo "== 6. reference requests left in the sources"
 if python3 -I - <<'EOF'
@@ -107,16 +132,36 @@ sys.exit(1 if bad else 0)
 EOF
 then echo "  ok"; else bad "label or input problems"; fi
 
-echo "== 9. layout summary"
+echo "== 9. layout: pages that end early (pushed boxes or floats) and stub chapter endings"
 python3 -I - <<'EOF'
-t = open("build/main.txt", encoding="utf-8").read().split("\f")[:-1]
-sparse = []
-for i, p in enumerate(t, 1):
-    lines = [l.strip() for l in p.split("\n") if l.strip()]
-    c = sum(len(l) for l in lines)
-    if lines and c < 700 and i > 4 and not lines[0].startswith("Contents") and c > 40:   # part pages hold only a numeral and a title
-        sparse.append((i, c))
-print(f"  {len(t)} pages; sparse (<700 characters, not part pages): {sparse}")
+import re, statistics, subprocess
+out = subprocess.run(["pdftotext", "-bbox", "build/main.pdf", "-"], capture_output=True, text=True).stdout
+pages = []
+for pg in re.findall(r"<page [^>]*>(.*?)</page>", out, flags=re.S):
+    words = [(float(a), float(b), w) for a, b, w in
+             re.findall(r'<word xMin="[\d.]+" yMin="([\d.]+)" xMax="[\d.]+" yMax="([\d.]+)">([^<]*)</word>', pg)]
+    pages.append(words)
+def big(words):            # a chapter or part heading: a word at least 20pt tall in the top half
+    return any(y1 - y0 > 20 and y0 < 400 for y0, y1, w in words)
+bottoms = [max(y1 for y0, y1, w in p) for p in pages if p]
+foot = statistics.median(bottoms) if bottoms else 0              # the running foot (page number) line
+body_end = [max([y1 for y0, y1, w in p if y1 < foot - 6] or [0]) for p in pages]
+full = sorted(body_end)[int(0.9 * (len(body_end) - 1))] if body_end else 0
+gaps, stubs = [], []
+for i, p in enumerate(pages):
+    if not p or i < 2 or i == len(pages) - 1 or big(p) and len(p) < 25:
+        continue                                                 # title page and verso, last page, part pages
+    nxt_new = big(pages[i + 1])
+    tops = [y0 for y0, y1, w in p if y1 < foot - 6]
+    top = min(tops) if tops else 0
+    if nxt_new and body_end[i] - top < 0.15 * (full - 80):
+        stubs.append(i + 1)
+    elif not nxt_new and full - body_end[i] > 0.25 * (full - 80):
+        gaps.append(i + 1)
+print(f"  {len(pages)} pages")
+print(f"  pages ending more than a quarter early, not before a new chapter: {gaps or 'none'}")
+print(f"  chapter-ending pages less than 15% full: {stubs or 'none'}")
+print("  (look at these pages; fix locally, see the skill's style reference, Layout repair)")
 EOF
 
 echo "== 10. the listing of the papers matches the length of the book"
@@ -151,5 +196,27 @@ for f in sorted(glob.glob("chapters/*.tex")):
 print("  " + (f"NOTE: possible prices at {hits[:10]}" if hits else "none found"))
 EOF
 
-[ $fail -eq 0 ] && echo "ALL HARD CHECKS PASSED" || echo "SOME CHECKS FAILED"
+echo "== 12. listings reproduce their saved output (figures/src/<name>.py with <name>.out)"
+if python3 -I - <<'EOF'
+import glob, os, subprocess, sys
+bad, n = [], 0
+for out in sorted(glob.glob("figures/src/*.out")):
+    py = out[:-4] + ".py"
+    if not os.path.exists(py):
+        continue
+    n += 1
+    try:
+        got = subprocess.run([sys.executable, "-I", os.path.basename(py)], cwd=os.path.dirname(py),
+                             capture_output=True, text=True, timeout=120).stdout
+    except subprocess.TimeoutExpired:
+        bad.append(f"{py}: timed out"); continue
+    if got != open(out, encoding="utf-8").read():
+        bad.append(f"{py}: output differs from {os.path.basename(out)}")
+print(f"  {n} listing(s) rerun, {len(bad)} problem(s)")
+for b in bad: print("  ", b)
+sys.exit(1 if bad else 0)
+EOF
+then echo "  ok"; else bad "a quoted listing output is not what the script prints now (rerun it, update the .out and the text)"; fi
+
+[ $fail -eq 0 ] && echo "ALL HARD CHECKS PASSED ($notes note(s) above)" || echo "SOME CHECKS FAILED ($notes note(s) above)"
 exit $fail

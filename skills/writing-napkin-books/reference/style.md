@@ -16,19 +16,26 @@ boxes after the Napkin's theorem boxes, one box counter per section (`Example 2.
 | `workedbox` "Example" | rust box | a worked example with real numbers, every step shown |
 | `cautionbox` "Caution" | crimson bar | a safety rule or a costly mistake |
 | `buildbox` "Build it" | green bar | something to build, run, measure or try, with its expected result |
-| `connectionbox` (named in `bookmeta.tex`) | green bar | why the book's main topic cares, with `\cref` forward |
+| `connectionbox` (named in `bookmeta.tex`) | green bar | a link to the book's main application or a neighboring field, with `\cref` forward |
 | `checkbox` "Check yourself" | green bar | three short questions, answers in `\footnotesize` |
 | `readingbox` "Reading advice" | green bar | what to read next and what for; `[Further reading]` ends a chapter |
-| `papercard` / `webcard` | blue, rust or green by tier | one paper or source |
+| `papercard` / `webcard` | blue, rust or green by tier | one paper or source (cards are not callouts) |
+
+`papercard{key}{Display name}` takes its metadata from `papers.tex`; `webcard[Kind]{key}{Display name}{Full
+title}{meta line}{tier}` is for sources with an entry in `refs_manual.bib` (Kind, the heading word, defaults to
+Paper). Keep a Key idea box short (it never breaks across pages, so a long one leaves a gap).
 
 ## The voice of a crash course
 
 * Second person, plain and concrete; short paragraphs; *why* before *how*.
 * No term before its definition. Define in italics at first use, in plain words, with its unit.
-* Every formula gets a worked example with numbers; every number gets a unit; round to 2-3 significant figures.
+* Every formula gets a worked example with numbers; every number gets a unit (say once that a quantity is
+  dimensionless); round to 2-3 significant figures; write the step that produces each rounded number
+  ($5\times e^{-1}=5\times0.368$, not $5\times0.37$, when the result is 1.84).
 * Analogies are welcome; say where they break.
 * Open each chapter with 100-150 words on why it matters and 3-5 "By the end you should be able to" bullets; end it
-  with "Check yourself" and "Further reading"; say in one sentence what was left out.
+  with "Check yourself" and "Further reading" (reorder the boxes of the last section if the page breaks demand it);
+  say in one sentence what was left out.
 * Practical advice is conservative and labeled when it comes from experience rather than a source ("in practice").
 
 ## Paper cards and the reading guide
@@ -68,6 +75,10 @@ boxes after the Napkin's theorem boxes, one box counter per section (`Example 2.
 | An overfull line from a URL or a long word | `\url{}` (xurl breaks anywhere), `\hyphenation{}` in the preamble, or rephrase |
 | A table is too wide | `tabularx` with `X` columns, `\small`, or abbreviations defined in the caption |
 | A long box splits across pages | Fine if each part has several lines; otherwise move text around it |
+| A box holding a long listing splits after two lines, or leaves a big gap | Put a local `\Needspace{30\baselineskip}` (the box's height) right before the box or its section heading, or split the listing at a natural break (`\lstinputlisting[firstline=..,lastline=..]`) into two boxes |
+| A Key idea box is pushed to the next page | Shorten it, or move it a paragraph earlier |
 
-Never lower `\Needspace` in `\calloutstart`, the section `\Needspace` or the heading skips in `preamble.tex` to fix
-one page: every later box moves and the whole book repaginates, creating new bad pages elsewhere.
+Raising `\Needspace` *locally*, before one box, is fine. Never lower `\Needspace` in `\calloutstart`, the section
+`\Needspace` or the heading skips in `preamble.tex` to fix one page: every later box moves and the whole book
+repaginates, creating new bad pages elsewhere. `tools/check.sh` check 9 lists pages that end more than a quarter
+early and stub chapter endings, but only the visual pass sees everything.

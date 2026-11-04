@@ -26,7 +26,7 @@ bash <skill dir>/scripts/new_book.sh <dir> "<Title>" "<Short title>" [File_Name]
 ```
 Then edit `bookmeta.tex` (subtitle, keywords, `\connectionname`), `tools/book.env` (`LETTER_PREFIXES` if a lettered
 part is planned), `tools/data/groups.tsv` (how the appended papers are grouped), replace the parts in `main.tex`, and
-make the first commit. Create one tracker issue per phase and one per chapter.
+make the first commit. If the project uses an issue tracker, create one issue per phase and one per chapter.
 
 ## 3. Corpus (reading guides)
 
@@ -41,13 +41,19 @@ make the first commit. Create one tracker issue per phase and one per chapter.
    `tools/data/venues.tsv` only when confirmed (arXiv comment or journal-ref, proceedings page, Crossref); rerun
    `python3 -I tools/build_meta.py tools/data/candidates.tsv tools/data/venues.tsv tools/data/arxiv_meta.json .`
    after editing it.
-4. **Other sources.** Books, journal-only papers, documentation, blog posts: check with `tools/crossref.py DOI` or the
-   publisher or library page, then add to `refs_manual.bib` (`@online` with `urldate` for web pages).
-5. **PDFs.** Build once (biber records citations), then `python3 -I tools/make_cited_keys.py . >
-   tools/data/cited_keys.json` and `python3 -I tools/fetch_papers.py tools/data/cited_keys.json papers`. It is
-   polite (one request at a time, back-off), resumable (`papers/manifest.tsv`) and stops under 3 GB free. Papers
-   can be registered before they are cited: put them in a scratch `.tsv` and run `fetch_papers.py` on a hand-written
-   `{"arxiv": {key: id}, "manual": []}` file.
+4. **Other sources.** Books, journal-only papers, documentation, blog posts: check with `tools/crossref.py DOI` or,
+   without a DOI, the publisher's page and its BibTeX export (record the URL; never fill in a DOI from memory), then
+   add to `refs_manual.bib` (`@online` with `urldate` for web pages).
+5. **PDFs.** Download a paper before its card is written, so that the card can be checked against the text:
+   ```bash
+   python3 -I tools/make_cited_keys.py . > tools/data/cited_keys.json   # after a build: the cited papers
+   # or, for papers registered but not yet cited, write the list by hand:
+   #   {"arxiv": {"vaswani2017attention": "1706.03762"}, "manual": []}  -> tools/data/cited_keys.json
+   python3 -I tools/fetch_papers.py tools/data/cited_keys.json papers
+   python3 -I tools/pdfgrep.py vaswani2017attention 'multi-head' 'BLEU'   # matches with their page numbers
+   ```
+   `fetch_papers.py` is polite (one request at a time, back-off), resumable (`papers/manifest.tsv`) and stops under
+   3 GB free.
 6. **Reading notes.** Reading agents, 5-10 sources each, with `briefs/notes_brief.md`. Their notes go to
    `provenance/notes/`; chapter writers build on them, and fact-checkers use them only to find passages.
 
@@ -92,6 +98,8 @@ same file with "continue the draft in place".
 * Read every report. For each non-confirmed item, apply the fix (the writer, a fixer agent given the report and the
   chapter, or you) and log the item in `provenance/factcheck/<block>_applied.md` as APPLIED, ALREADY FIXED (the text
   no longer makes the claim) or DECLINED (with the reason). Rebuild and recheck the chapter afterwards.
+* For a crash course, consider one more agent that reads as the target reader (given only the prerequisites) and
+  lists every term used before it is defined and every step it could not follow.
 * What checkers caught that writers had missed, in practice: figures with arrows, current directions or battery
   polarity reversed; a safety checklist in the wrong order; an emergency stop that restarted on release; a statement
   that held for one sign only; worked examples with a wrong count; claims sourced to the wrong table. Budget for a
@@ -105,6 +113,10 @@ same file with "continue the draft in place".
 * Preface and title verso: the dates of verification, the method, the caveats, the counts (`\npapers` is generated).
 * `README.md` and `provenance/README.md`: what each file is, which checks were done, and their limits.
 * `python3 -I tools/americanize.py . --write` if the spelling check fails (then reread the diff).
+* Say only what was done: the title verso, the preface and `provenance/README.md` describe the checks that actually
+  happened (`check.sh` check 5b fails if the book mentions fact-checks and `provenance/factcheck/` is empty).
+* Replace the template's example chapters, and grep for their labels (`ch:tour`, `ch:reading`, `part:start`,
+  `part:literature`, `fig_decay`) in `main.tex`, `chapters/` and `figures/`.
 
 ## 8. Build and QA
 
@@ -114,22 +126,23 @@ bash tools/contact_sheets.sh build/main.pdf build/qa  # then open every sheet
 pdftoppm -r 120 -f N -l N -png build/main.pdf build/qa/zoom   # suspicious pages, then crop and look
 ```
 Look for: headings stranded at a page bottom, boxes split badly, near-empty pages (check 9 lists them), figures far
-from their text, overlapping labels, `??`, red `\fillin` text. Fix locally (see `style.md`, "Layout repair"). Rerun
-`check.sh` after every change; a passing run is the gate, not the change.
+from their text, overlapping labels, `??`, red `\fillin` text. Check 9 lists pages that end early and stub chapter
+endings; the sheets show the rest. Fix locally (see `style.md`, "Layout repair"). Rerun `check.sh` after every change;
+a passing run is the gate, not the change. Its last line counts the NOTEs; read them before delivering.
 
 ## 9. Combined volume
 
 ```bash
 bash tools/build_volume.sh          # rebuilds until the book's page count settles, joins, repairs, copies the book
 python3 -I tools/verify_volume.py <BOOK_NAME>_with_papers.pdf build/papers_order.json
-bash tools/compare_pages.sh <BOOK_NAME>.pdf <BOOK_NAME>_with_papers.pdf 1 5 20   # book pages unchanged
+bash tools/compare_pages.sh <BOOK_NAME>.pdf <BOOK_NAME>_with_papers.pdf   # first, second, middle, last page
 ```
 `verify_volume.py` prints where sample links land; read them. A few papers' PDFs print syntax warnings in pdfunite;
 they are harmless if the verifier passes. Keep the combined PDF out of git (it is in `.gitignore`).
 
 ## 10. Deliver
 
-Commit and push (only the compiler pushes). The final message, in this order:
+Commit, and push if the repository has a remote (only the compiler pushes). The final message, in this order:
 
 1. What the book is now: parts and chapter count, pages, papers carded and appended, figures.
 2. Where the files are: the book PDF, the combined PDF, the sources, the briefs and provenance.
@@ -153,7 +166,8 @@ Commit and push (only the compiler pushes). The final message, in this order:
 | `pdfunite` output has no bookmarks and dead links | Known pdfunite behavior | `tools/build_volume.py` repairs it; never ship the raw union |
 | Page numbers in the papers listing are off | The listing changes the book's length | `build_volume.sh` loops until stable; `check.sh` check 10 notes staleness |
 | `.git/index.lock` errors | Parallel writers committing | Wait and retry; path-limited commits only |
-| In zsh, `$FILES` is passed as one argument; `echo =====` fails | zsh does not split words; `=word` is expanded | Use arrays or `bash -c '...'`; quote separators |
+| In zsh, `$FILES` is passed as one argument; `echo =====` fails; `${PIPESTATUS[0]}` is empty | zsh does not split words, expands `=word`, and calls it `pipestatus` | Use arrays or `bash -c '...'`; quote separators and globs |
+| `pdfgrep.py` misses a phrase that is in the paper | pdftotext dropped a line-end hyphen or scrambled a table | Loosen the pattern (`800-?800`), then confirm on the page with `pdftotext -layout -f N -l N` |
 | Disk fills during downloads | Large corpora (about 10 MB per paper) | `df -h` before; `fetch_papers.py` stops under 3 GB free |
-| Orphaned figure files | A figure was cut but its file kept | `check.sh` check 8 lists them; delete or use |
+| Orphaned chapter or figure files | A chapter or figure was cut but its file kept | `check.sh` check 8 lists them; include it, or `git rm` it (the compiler, not a writer) |
 | Contact sheets skip pages | `pdftoppm` pads page numbers by document length | `tools/contact_sheets.sh` sorts with `sort -V` |

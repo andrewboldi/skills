@@ -10,8 +10,8 @@ Y), the question it answers, and who it is written for}.
   \item A \emph{curated, tiered} list of the important papers, each with a short card saying what it does, why it
         matters and what to read it for (Part~\ref{part:literature}).
   \item \fillin{one item per part: what the reader gets from it, with \textbackslash ref to the part}.
-  \item The \emph{papers themselves}. Part~\ref{part:papers} lists the \npapers{} arXiv papers cited in the book,
-        with links; in the combined edition the papers follow that list, joined into the same file, and the
+  \item The \emph{papers themselves}. Part~\ref{part:papers} lists the arXiv papers cited in the book (\npapers{} in
+        all), with links; in the combined edition the papers follow that list, joined into the same file, and the
         bookmarks lead to each of them.
 \end{enumerate}
 
@@ -23,8 +23,9 @@ build on it?), pivot (did it change a design choice?), clarity, recency}.
 
 \textbf{Verification.} \fillin{the title, authors, dates and category of every arXiv paper were fetched from the
 arXiv API on <date>; venues come from arXiv comment fields, publisher records (Crossref) or proceedings pages;
-every other source was checked against a publisher, library or official page; the claims were checked by
-independent readers against the papers (provenance/)}.
+every other source was checked against a publisher, library or official page; and how the claims were checked:
+name only checks that were actually done, e.g.\ independent readers against the papers, with reports in
+provenance/}.
 
 \textbf{Caveats.} \fillin{(1) numbers are as reported by the authors and were not reproduced; (2) preprints may
 change; (3) the tiers and the narrative are the compiler's judgment; (4) anything else a careful reader should
@@ -32,9 +33,9 @@ know}.
 
 \section*{Source files}
 
-The LaTeX sources, the scripts that generate the paper cards and the bibliography, and the reading notes and
-fact-check reports behind the claims are kept with this PDF (the directory \texttt{provenance/} holds the
-evidence).
+The LaTeX sources and the scripts that generate the paper cards and the bibliography are kept with this PDF, and
+the directory \texttt{provenance/} holds \fillin{the evidence that exists: reading notes, writers' reports,
+fact-check reports and the log of applied fixes; list only what is there}.
 
 The look of the book (fonts, colors, boxes, running heads, the structure of the front matter) follows that of
 Evan Chen's \emph{An Infinitely Large Napkin}~\cite{chen2024napkin}; the book uses none of its text or artwork.
@@ -85,8 +86,20 @@ changed what others did. They are the compiler's opinion, and they will age.
 
 \paragraph{The short path.} \fillin{the few chapters and cards to read if the reader has an hour or two}.
 
-\paragraph{The core path.} \fillin{a table of 8--12 papers in teaching order, each with one line on what to read
-it for (see the reading-path table in the skill's style reference)}.
+\paragraph{The core path.} \fillin{one sentence: how to use the table}. One row per paper in teaching order, at most
+twelve.
+
+\begin{center}
+\small\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\textwidth}{@{}>{\sffamily\bfseries\color{crimson}}r@{\hspace{1.1em}}>{\raggedright\arraybackslash}p{5.3cm}X@{}}
+\toprule
+\# & Paper & Read it for \\
+\midrule
+1 & \fillin{name~\textbackslash cite\{key\}} & \fillin{the idea it introduces} \\
+2 & \fillin{name~\textbackslash cite\{key\}} & \fillin{the idea it introduces} \\
+\bottomrule
+\end{tabularx}
+\end{center}
 
 \section{Conventions and notations}
 

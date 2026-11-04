@@ -43,6 +43,9 @@ def conv_dates(line):
 def conv(line):
     if line.lstrip().startswith("%"): return line
     if line.lstrip().startswith(("\\begin{papercard}", "\\begin{webcard}")): return line
+    cm = re.search(r"(?<!\\)%", line)          # a trailing comment is left as it is
+    if cm:
+        return conv(line[:cm.start()]) + line[cm.start():]
     out, pos = [], 0
     for m in prot_re.finditer(line):
         out.append(word_re.sub(lambda x: M[x.group(1)], line[pos:m.start()])); out.append(m.group(0)); pos = m.end()

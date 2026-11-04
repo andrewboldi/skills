@@ -45,6 +45,13 @@ def main():
     bad = [r for r in incoming if r[2] not in ("A", "B", "C") or not r[3]]
     if bad:
         sys.exit(f"every row needs tier A, B or C and a section code: {bad}")
+    codes = set()
+    for line in open(os.path.join(DATA, "groups.tsv"), encoding="utf-8"):
+        if line.strip() and not line.startswith("#"):
+            codes.update(c.strip() for c in (line.rstrip("\n").split("\t") + ["", ""])[2].split(","))
+    unknown = sorted({r[3] for r in incoming} - codes)
+    if unknown:
+        sys.exit(f"section codes not in tools/data/groups.tsv: {unknown} (add them there first)")
     new = [r for r in incoming if r[0] not in known_keys and r[1] not in known_ids]
     skipped = [r[0] for r in incoming if r not in new]
     if skipped:

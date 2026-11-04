@@ -60,8 +60,9 @@ Every list is a minimum; cut anything that does not fit the page budget, and say
 ## 6. Writing rules
 
 * <American> English. `python3 -I tools/americanize.py .` must print `changed lines: 0` for your files.
-* Units with siunitx: `\qty{330}{\ohm}`, `\qty{9.1}{\milli\ampere}`, `\unit{\volt}`. Round sensibly (2-3
-  significant figures); say "about" and use `\approx` for approximations.
+* Units with siunitx: `\qty{330}{\ohm}`, `\qty{9.1}{\milli\ampere}`, `\unit{\volt}`; say once when a quantity is
+  dimensionless. Round sensibly (2-3 significant figures); say "about" and use `\approx` for approximations; show
+  the step that produces a rounded number.
 * Notation, the same in every chapter: <symbol table>. Vectors and matrices bold.
 * Spell out an abbreviation at first use. Do not use footnotes.
 * **No prices**; say "inexpensive" or "costly". Do not state software versions, release dates, product
@@ -94,9 +95,10 @@ Every list is a minimum; cut anything that does not fit the page budget, and say
 
 ## 8. Code
 
-`lstlisting` (style `bookcode`), ASCII only, at most about 25 lines per listing. **Run every snippet** and quote the
-real output. Show only API calls you are certain of, and point to the documentation for the rest. <What is installed
-here, and what is not.>
+Keep each listing as a file in `figures/src/` and include it with `\lstinputlisting[language=Python]{...}`
+(style `bookcode`, ASCII only, at most about 25 lines per listing). **Run every snippet**, save its output next to it
+(`<name>.out`) and quote that output, so that anyone can rerun it and compare. Show only API calls you are certain of,
+and point to the documentation for the rest. <What is installed here, and what is not.>
 
 ## 9. Numbers and accuracy
 

@@ -6,7 +6,7 @@ usage: python3 -I tools/crossref.py DOI [DOI ...]
 import json, sys, time, urllib.request
 for doi in sys.argv[1:]:
     url = "https://api.crossref.org/works/" + doi
-    req = urllib.request.Request(url, headers={"User-Agent": "study-book-tools/0.1 (personal research)"})
+    req = urllib.request.Request(url, headers={"User-Agent": "napkin-book-tools/0.1 (personal research)"})
     try:
         d = json.load(urllib.request.urlopen(req, timeout=40))["message"]
     except Exception as e:

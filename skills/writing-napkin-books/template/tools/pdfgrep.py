@@ -7,8 +7,12 @@ usage: python3 -I tools/pdfgrep.py KEY REGEX [REGEX ...] [--n N] [--w W]
 KEY is a bibliography key listed in <PAPERS_DIR>/manifest.tsv (written by tools/fetch_papers.py; PAPERS_DIR is set in
 tools/book.env). The text of each PDF is extracted once with pdftotext and cached in build/txtcache/. --n is the
 number of matches shown per regex (default 3), --w the number of characters of context on each side (default 200).
-Matching is case-insensitive. Use it to verify a claim about a paper against the paper's own text, and quote the
-match (with its page, from pdftotext -f N -l N) in the provenance notes.
+Matching is case-insensitive; each match is printed with its PDF page (p.N), for the page locators of the notes.
+Use it to verify a claim about a paper against the paper's own text.
+
+Text extraction alters some tokens: pdftotext drops a hyphen at a line end (so "800-" + "800" across a line break
+reads "800800"), ligatures and math come out oddly, and tables are scrambled. Search with loose patterns (800-?800,
+\\s* between words) and confirm a quote on the page itself: pdftotext -layout -f N -l N <pdf> - .
 """
 import glob
 import os
@@ -64,7 +68,7 @@ def text_of(key, ids):
         out = subprocess.run(["pdftotext", "-q", pdf, "-"], capture_output=True, text=True, timeout=180).stdout
         out = out.replace("ﬁ", "fi").replace("ﬂ", "fl").replace("ﬀ", "ff")
         out = re.sub(r"-\n(?=[a-z])", "", out)
-        out = re.sub(r"\s+", " ", out)
+        out = "\f".join(re.sub(r"\s+", " ", page) for page in out.split("\f"))   # \f separates pages
         open(cf, "w", encoding="utf-8").write(out)
     return open(cf, encoding="utf-8").read()
 
@@ -86,13 +90,15 @@ def main():
         del args[i:i + 2]
     key, pats = args[0], args[1:]
     t = text_of(key, ids)
-    print(f"=== {key} ({len(t)} characters)")
+    npages = t.count("\f") + (0 if t.endswith("\f") else 1)     # pdftotext ends every page with \f
+    print(f"=== {key} ({len(t)} characters, {npages} pages)")
     for pat in pats:
         ms = list(re.finditer(pat, t, re.I))
         print(f"--- [{pat}] {len(ms)} match(es)")
         for m in ms[:n]:
             a, b = max(0, m.start() - w), min(len(t), m.end() + w)
-            print("   ..." + t[a:b] + "...")
+            page = t.count("\f", 0, m.start()) + 1
+            print(f"   p.{page}: ..." + t[a:b].replace("\f", " [page break] ") + "...")
 
 
 if __name__ == "__main__":

@@ -1,6 +1,6 @@
 ---
 name: writing-napkin-books
-description: Use when the user asks for a Napkin-style book on a topic (in the style of Evan Chen's An Infinitely Large Napkin, or like the VLA reading guide made with this skill), or asks to continue, extend or rebuild a book scaffolded from this skill's template. Not for ordinary study guides, notes, cheat sheets, summaries or single LaTeX documents unless the user asks for the Napkin style.
+description: Use when the user asks for a Napkin-style book on a topic (in the style of Evan Chen's An Infinitely Large Napkin, or like the VLA reading guide this skill was derived from), or asks to continue, extend or rebuild a book scaffolded from this skill's template. Not for ordinary study guides, notes, cheat sheets, summaries or single LaTeX documents unless the user asks for the Napkin style.
 ---
 
 # Writing Napkin-style books
@@ -27,7 +27,7 @@ bash <skill dir>/scripts/new_book.sh ~/books/qec "Quantum Error Correction: A Re
 cd ~/books/qec && bash tools/check.sh      # check 5 lists the red \fillin markers still to be written
 ```
 
-The scaffold builds a 17-page example: a crash-course chapter that uses each of the seven callout boxes once
+The scaffold builds a 16-page example: a crash-course chapter that uses each of the seven callout boxes once
 (`ch01_template_tour`), a reading-guide chapter with cards (`ch02_reading_example`), the front matter, glossary,
 bibliography and papers part. Copy their shape, then replace them (`git mv`, overwrite, grep for their labels).
 

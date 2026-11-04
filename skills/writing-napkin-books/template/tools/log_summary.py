@@ -19,9 +19,21 @@ errs = re.findall(r"^! ([^\n]*)\n(?:[^\n]*\n)?(l\.\d+[^\n]*)?", log, flags=re.M)
 for e, where in errs[:6]:
     print(f"ERROR: {e}  {where}".rstrip())
 
-# LaTeX quotes the key as `key' or 'key' depending on the kernel version; biblatex reports missing entries separately.
-cites = sorted(set(re.findall(r"Citation [`']([^']*)' on page \d+ undefined", log))
-               | set(re.findall(r"The following entry could not be found\s+in the database:\s+(\S+)", log)))
+def undefined_citations(log):
+    # LaTeX quotes the key as `key' or 'key' depending on the kernel version; biblatex reports a missing entry in
+    # its own warning, wrapped over "(biblatex)" continuation lines, which are joined first.
+    joined = re.sub(r"\n\(biblatex\)\s+", " ", log)
+    return sorted(set(re.findall(r"Citation [`']([^']*)' on page \d+ undefined", log))
+                  | set(re.findall(r"The following entry could not be found in the database: (\S+)", joined)))
+
+
+# Self-test: the warning forms that must be recognized (add one whenever a new form slips through).
+for sample in ("LaTeX Warning: Citation 'k' on page 1 undefined on input line 2.",
+               "LaTeX Warning: Citation `k' on page 1 undefined on input line 2.",
+               "Package biblatex Warning: The following entry could not be found\n"
+               "(biblatex)                in the database:\n(biblatex)                k\n"):
+    assert undefined_citations(sample) == ["k"], "log_summary.py no longer recognizes: " + sample
+cites = undefined_citations(log)
 if cites:
     print("UNDEFINED CITATIONS:", ", ".join(cites))
 refs = sorted(set(re.findall(r"Reference [`']([^']*)' on page \d+ undefined", log)))

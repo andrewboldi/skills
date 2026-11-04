@@ -20,11 +20,20 @@ LOG=build/main.log
 echo "== 2. unresolved citations / references, multiply defined labels"
 if python3 -I - "$LOG" <<'EOF'
 import re, sys
-log = open(sys.argv[1], encoding="utf-8", errors="replace").read()
-# LaTeX quotes the key as `key' or 'key' depending on the kernel version; biblatex reports missing entries separately.
-hits = re.findall(r"(Citation [`'][^']*' [^\n]*undefined|Reference [`'][^']*' [^\n]*undefined|There were undefined references"
-                  r"|Label\(s\) may have changed|Label [`'][^']*' multiply defined"
-                  r"|The following entry could not be found\s+in the database:\s+\S+)", log)
+PAT = (r"(Citation [`'][^']*' [^\n]*undefined|Reference [`'][^']*' [^\n]*undefined|There were undefined references"
+       r"|Label\(s\) may have changed|Label [`'][^']*' multiply defined"
+       r"|The following entry could not be found in the database: \S+)")
+def problems(log):
+    # LaTeX quotes the key as `key' or 'key' depending on the kernel version; biblatex reports a missing entry in
+    # its own warning, wrapped over "(biblatex)" continuation lines, which are joined first.
+    return re.findall(PAT, re.sub(r"\n\(biblatex\)\s+", " ", log))
+# Self-test: the warning forms this check must recognize (add one whenever a new form slips through).
+for sample in ("LaTeX Warning: Citation 'k' on page 1 undefined on input line 2.",
+               "LaTeX Warning: Citation `k' on page 1 undefined on input line 2.",
+               "Package biblatex Warning: The following entry could not be found\n"
+               "(biblatex)                in the database:\n(biblatex)                k\n"):
+    assert problems(sample), "check 2 no longer recognizes: " + sample
+hits = problems(open(sys.argv[1], encoding="utf-8", errors="replace").read())
 for h in hits[:10]: print("  ", h)
 sys.exit(1 if hits else 0)
 EOF

@@ -56,6 +56,32 @@ tracker, open one issue per phase and one per chapter.
 9. **Combined volume** (optional). `tools/build_volume.sh`, then `tools/verify_volume.py`.
 10. **Deliver.** Commit (push if there is a remote) and send the final message (`reference/workflow.md`, section 10).
 
+## Models and thinking levels
+
+Launch every agent with both a model and a thinking level (`model` and `effort` on the agent call), as in this
+table. An agent launched without them runs on the main session's model at its default level, which can be costly:
+an Opus agent launched without a level spent about 122,000 tokens writing a 600-word plan. The main session's own
+model and level are the user's choice (`/model`, `/effort`); recommend Opus at `high`, and `max` only for phase 4.
+Launch them as fresh agents (for example `general-purpose`), never as forks: a fork ignores `model` and `effort` and
+runs exactly like the main session.
+
+| Role | `model` | `effort` |
+|---|---|---|
+| Main session: architecture, exemplar chapter, integration, final review | opus (the user sets it) | high; max for phase 4 |
+| Reading-notes agents (phase 3) | sonnet | medium |
+| Writer agents (phase 5) | sonnet | medium; high for chapters marked math-heavy or safety-critical in the chapter map |
+| Fact-checkers (phase 6) | opus | high |
+| Fixers applying a fact-check report (phase 6) | sonnet | medium |
+| Target-reader pass (optional, phase 6) | sonnet | low |
+| Glossary and bibliography merging (phase 7) | sonnet | low |
+| Visual review of the contact sheets (phase 8) | sonnet | medium |
+| arXiv metadata, downloads, the combined PDF | no agent: run the scripts | |
+
+Writers use most of the tokens (long build-and-fix loops), so they run on Sonnet, and the fact-check catches what
+they miss. Checkers are few and are the quality gate, so they get Opus, a different model from the writers' that
+shares fewer of their blind spots. If usage runs short, move checkers to sonnet/high and the main session to
+opus/medium for every phase, phase 4 included.
+
 ## Rules that keep the book trustworthy
 
 - Bibliographic data comes from the arXiv API, Crossref, or publisher and library pages, never from memory.

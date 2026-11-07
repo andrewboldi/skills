@@ -1,6 +1,7 @@
 # Workflow in detail
 
-The phases of SKILL.md with commands, agent prompts and acceptance gates. "Compiler" means you, the main session:
+The phases of SKILL.md with commands, agent prompts and acceptance gates. Launch every agent with the model and
+thinking level given here and in SKILL.md ("Models and thinking levels"). "Compiler" means you, the main session:
 you own the shared files (`preamble.tex`, `kit.tex`, `bookmeta.tex`, `main.tex`, bibliographies, glossary, preface),
 dispatch the agents, integrate and push.
 
@@ -54,7 +55,8 @@ make the first commit. If the project uses an issue tracker, create one issue pe
    ```
    `fetch_papers.py` is polite (one request at a time, back-off), resumable (`papers/manifest.tsv`) and stops under
    3 GB free.
-6. **Reading notes.** Reading agents, 5-10 sources each, with `briefs/notes_brief.md`. Their notes go to
+6. **Reading notes.** Reading agents (`model: sonnet`, `effort: medium`), 5-10 sources each, with
+   `briefs/notes_brief.md`. Their notes go to
    `provenance/notes/`; chapter writers build on them, and fact-checkers use them only to find passages.
 
 ## 4. Architecture
@@ -64,7 +66,8 @@ make the first commit. If the project uses an issue tracker, create one issue pe
   part if asked; reference (open problems, resources, glossary); the papers. A crash-course part slots in after the
   orientation as a lettered part (chapters C1, C2, ...) so that adding it never renumbers the other chapters.
 * **Chapter map.** One row per chapter: file, `\label`, title, page budget, the minimum content, worked-example
-  numbers, the figures wanted. It goes into section 3-4 of `briefs/writers_guide.md`.
+  numbers, the figures wanted, and whether it is math-heavy or safety-critical (its writer then runs at
+  `effort: high`). It goes into section 3-4 of `briefs/writers_guide.md`.
 * **Front matter.** The preface states what the book gives, how the list was chosen and checked (with dates), and
   its caveats. "Advice for the reader" has prerequisites, the part map, the dependency chart
   (`figures/fig_chapterdeps.tex`), the tier legend, reading paths (a short path and a 8-12 row core path in teaching
@@ -74,8 +77,9 @@ make the first commit. If the project uses an issue tracker, create one issue pe
 
 ## 5. Drafting with writer agents
 
-Dispatch writers in parallel, at most about 4-6 at once (each runs LaTeX builds; more contend for CPU and memory),
-in the background, each on its own chapter. A writer prompt contains, in order:
+Dispatch writers in parallel (`model: sonnet`, `effort: medium`; `effort: high` for math-heavy or safety-critical
+chapters), at most about 4-6 at once (each runs LaTeX builds; more contend for CPU and memory), in the background,
+each on its own chapter. A writer prompt contains, in order:
 
 1. "You are the writer of chapter <N>, <title>, of <book>, in `<repo path>`."
 2. "Read `briefs/writers_guide.md` whole, then the exemplar `chapters/<file>`, before writing."
@@ -92,13 +96,15 @@ same file with "continue the draft in place".
 
 ## 6. Independent fact-check
 
-* Group chapters into blocks of about 100 checkable claims (2-3 chapters). One checker per block, with
+* Group chapters into blocks of about 100 checkable claims (2-3 chapters). One checker per block (`model: opus`,
+  `effort: high`), with
   `briefs/factcheck_brief.md` and the block's files. Checkers are not the writers and get no summary of your own
   views of the text.
 * Read every report. For each non-confirmed item, apply the fix (the writer, a fixer agent given the report and the
-  chapter, or you) and log the item in `provenance/factcheck/<block>_applied.md` as APPLIED, ALREADY FIXED (the text
+  chapter at `model: sonnet`, `effort: medium`, or you) and log the item in `provenance/factcheck/<block>_applied.md` as APPLIED, ALREADY FIXED (the text
   no longer makes the claim) or DECLINED (with the reason). Rebuild and recheck the chapter afterwards.
-* For a crash course, consider one more agent that reads as the target reader (given only the prerequisites) and
+* For a crash course, consider one more agent (`model: sonnet`, `effort: low`) that reads as the target reader
+  (given only the prerequisites) and
   lists every term used before it is defined and every step it could not follow.
 * What checkers caught that writers had missed, in practice: figures with arrows, current directions or battery
   polarity reversed; a safety checklist in the wrong order; an emergency stop that restarted on release; a statement
@@ -107,7 +113,8 @@ same file with "continue the draft in place".
 
 ## 7. Integration (compiler)
 
-* Glossary: merge the writers' proposed entries, alphabetical, one line each, with the chapter where it is explained.
+* Glossary: merge the writers' proposed entries (yourself, or an agent at `model: sonnet`, `effort: low`),
+  alphabetical, one line each, with the chapter where it is explained.
 * Cross-references: add the ones writers asked for (forward and backward), check that `\cref` targets exist.
 * Citations: place the references the writers asked for (`NEED REF` lines), each checked before it is added.
 * Preface and title verso: the dates of verification, the method, the caveats, the counts (`\npapers` is generated).
@@ -127,7 +134,8 @@ pdftoppm -r 120 -f N -l N -png build/main.pdf build/qa/zoom   # suspicious pages
 ```
 Look for: headings stranded at a page bottom, boxes split badly, near-empty pages (check 9 lists them), figures far
 from their text, overlapping labels, `??`, red `\fillin` text. Check 9 lists pages that end early and stub chapter
-endings; the sheets show the rest. Fix locally (see `style.md`, "Layout repair"). Rerun `check.sh` after every change;
+endings; the sheets show the rest. If you delegate the sweep (`model: sonnet`, `effort: medium`), still look
+yourself at every page it flags and at a sample of the others. Fix locally (see `style.md`, "Layout repair"). Rerun `check.sh` after every change;
 a passing run is the gate, not the change. Its last line counts the NOTEs; read them before delivering.
 
 ## 9. Combined volume

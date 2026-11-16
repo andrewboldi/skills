@@ -1,7 +1,7 @@
 # The one-command installer
 
 One pasted line installs everything, dependencies included, and works out of the box on every
-platform the README claims. Worked example: `~/tmux-restore/install.sh`.
+platform the README claims.
 
 ## Shape
 
@@ -30,8 +30,8 @@ platform the README claims. Worked example: `~/tmux-restore/install.sh`.
 ## Platforms
 
 HN readers use macOS a lot. Before launch, decide whether to support it or to say "Linux only"
-in the README. tmux-restore added macOS support (a launchd watcher, Homebrew dependencies) before
-posting.
+in the README. Adding it before launch is usually cheaper than answering the same question
+in every thread.
 
 ## Tests
 

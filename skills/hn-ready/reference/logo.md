@@ -1,14 +1,13 @@
 # Logo
 
-Worked example: `~/tmux-restore/assets/logo.svg`. It's a terminal window with traffic-light
-dots, tmux's green status bar and split panes, plus a counter-clockwise "restore" arrow around
-clock hands.
+For a terminal tool, a good start is a terminal window (title-bar dots, a status bar) with one
+symbol for what the tool does.
 
 ## Make it
 
 - Write the SVG by hand, with `viewBox="0 0 256 256"`, `role="img"` and `aria-label="NAME"`.
 - Draw it from motifs of the tool's domain. Use flat shapes and 3–5 colors.
-- Reuse one accent color in the ecosystem badge. tmux-restore's green `1bb91f` is in both.
+- Reuse the logo's accent color in the ecosystem badge.
 - Give the logo its own dark body, so one file reads on GitHub's white and dark (`#0d1117`)
   themes alike, with no `<picture>` pair needed.
 - Generate curves from numbers rather than eyeballing them. For an arc, pick the center C, the
@@ -17,10 +16,10 @@ clock hands.
 
 ## Check it
 
-1. Run `bash ~/.claude/skills/hn-ready/scripts/render-logo.sh assets/logo.svg logo-check.png 132`, then Read the PNG. It
+1. Run `bash <skill dir>/scripts/render-logo.sh assets/logo.svg logo-check.png 132`, then Read the PNG. It
    shows a large render and the README's display size (132 px), each on white and on `#0d1117`.
-2. Look at every shape that points somewhere. tmux-restore's arrowhead shipped pointing
-   backwards and stayed that way for two weeks, until the user noticed.
+2. Look at every shape that points somewhere. An arrowhead that points backwards is easy to
+   miss: one shipped that way and stayed for two weeks before anyone noticed.
    - An arrowhead's tip must lie along the arc's tangent at the end it sits on, in the
      direction of travel, with its base straddling the arc.
    - In SVG coordinates (y points down), at point P on a circle around C, with

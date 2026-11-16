@@ -6,9 +6,7 @@ description: Use when the user asks to make a project HN-ready, to get it ready 
 # Making a project HN-ready
 
 HN-ready means a stranger who clicks the GitHub link understands the tool in ten seconds,
-installs it with one paste, and it works. All of this was learned launching tmux-restore
-(`~/tmux-restore`, github.com/andrewboldi/tmux-restore), which reached the HN front page. Its
-README is the worked example.
+installs it with one paste, and it works.
 
 ## Gates
 
@@ -35,8 +33,8 @@ README is the worked example.
 
 ## Checklist
 
-This skill's folder is `~/.claude/skills/hn-ready`. The `reference/` and `scripts/` paths below
-are in it.
+`<skill dir>` below is the folder this SKILL.md is in. The `reference/` and `scripts/` paths are
+inside it.
 
 | Area | Ready when | Read |
 |---|---|---|
@@ -46,7 +44,8 @@ are in it.
 | Logo | Hand-written SVG, rendered on light and dark backgrounds at display size, with arrows checked by geometry | `reference/logo.md` |
 | Demo | A real recording, 20–30 s, every frame looked at | `reference/demo.md` |
 | Docs | `docs/` has caveats, how it works and install by hand. `CONTRIBUTING.md` covers the tests and how to extend. `LICENSE` | `reference/readme.md` |
-| CI | Tests run on every push and the badge reads "passing". Before launch, run `bash ~/.claude/skills/hn-ready/scripts/check-readme.sh README.md` in the project. It's a check for you, not a file for the project | |
+| Work tracking | Contributors must track their work with bd (beads), since nearly everyone contributes through a coding agent. bd is set up in the repo, and `CONTRIBUTING.md` and `AGENTS.md` say every change starts as a bd issue | `reference/bd.md` |
+| CI | Tests run on every push and the badge reads "passing". Before launch, run `bash <skill dir>/scripts/check-readme.sh README.md` in the project. It's a check for you, not a file for the project | |
 | GitHub | The About text says what it does and names the supported tools. Topics cover the domain and each tool | |
 | Privacy | Nothing personal in the files, the git history, test fixtures or GIF frames | below |
 | Launch kit | Title, submit link, talking points and timing, in a launch folder outside the repo | `reference/show-hn.md` |
@@ -65,11 +64,11 @@ are in it.
 
 | What happened | Do instead |
 |---|---|
-| The first README listed what it needed ("Needs Linux with systemd…") | One install command; the installer installs what's needed |
-| The same HN questions kept coming | Restructure the README so it answers them ("What it adds to tmux-resurrect"). Never add an FAQ heading |
-| The logo's arrowhead pointed backwards for two weeks | Check direction by geometry, in a zoomed render |
-| The demo GIF showed a notice from the user's own settings | Record from a clean environment and look at every frame |
-| The first title said "Claude Code sessions" | Name the category ("agent sessions"); list the tools in the README |
-| The post sat at 1 point after two hours | Normal. HN's second-chance pool put it on the front page three days later |
-| Arch container tests broke on a partial upgrade (`pacman -Sy pkg`) | Full-upgrade rolling distros in test setup. The installer never runs `-Sy` |
-| The user's machine still ran an older private copy | Install the published version and update it after every push once CI is green |
+| A README listed what the tool needed ("Needs Linux with systemd…") | One install command; the installer installs what's needed |
+| The same questions kept coming up in the HN thread | Restructure the README so it answers them, e.g. with a section on what the tool adds to the one people already use. Never add an FAQ heading |
+| A logo's arrowhead pointed backwards for two weeks before anyone noticed | Check direction by geometry, in a zoomed render |
+| A demo GIF showed a notice from the author's own settings | Record from a clean environment and look at every frame |
+| A title named one vendor's product when the tool supported several | Name the category in the title; list the tools in the README |
+| A post sat at 1 point two hours after posting | Normal. HN's second-chance pool can put a post on the front page days later |
+| Container tests broke on a partial upgrade (`pacman -Sy pkg`) | Full-upgrade rolling distros in test setup. The installer never runs `-Sy` |
+| The author's own machine still ran an older private copy | Install the published version and update it after every push once CI is green |

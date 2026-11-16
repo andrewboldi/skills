@@ -10,7 +10,8 @@
 
 Make a numbered list. For each item give who raised it (with a link), what they want, what it
 would take, and your recommendation. Separate ideas that are new from questions the README or
-docs already answer. The user picks ("do 1 through 5"). Do nothing they didn't pick.
+docs already answer. The user picks ("do 1 through 5"). Do nothing they didn't pick. File each
+picked item as a bd issue (`reference/bd.md`) and close it with the commit.
 
 ## Do the picked items end to end
 

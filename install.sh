@@ -24,7 +24,15 @@ die() {
 	printf '\033[1;31merror:\033[0m %s\n' "$*" >&2
 	exit 1
 }
-tilde() { printf '%s' "${1/#"$HOME"/\~}"; } # an unescaped ~ would expand back to $HOME
+# PATH with $HOME shown as ~. (${1/#$HOME/~} differs between bash versions: bash 5 expands the ~
+# back to $HOME, and bash 3.2 keeps a backslash in front of an escaped one.)
+# shellcheck disable=SC2088 # the ~ is printed, not expanded
+tilde() {
+	case $1 in
+	"$HOME"/*) printf '~/%s' "${1#"$HOME"/}" ;;
+	*) printf '%s' "$1" ;;
+	esac
+}
 
 # One line per agent: its name, the folder that shows it's installed, and its skills folder.
 # These are the global folders the skills CLI uses (github.com/vercel-labs/skills, docs/agents.md).

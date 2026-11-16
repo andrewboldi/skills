@@ -9,7 +9,7 @@
 # Labels defined in other chapters stay unresolved here (they print as ??); citations must resolve.
 # With --png, every page is also rendered to build/chap/t_<name>-<page>.png (70 dpi) for looking at the figures.
 set -uo pipefail
-cd "$(dirname "$0")/.."
+cd "$(dirname "$0")/.." || exit 1
 source tools/book.env
 src=${1:?usage: build_chapter.sh chapters/<file>.tex [--png]}
 name=$(basename "$src" .tex)

@@ -19,7 +19,7 @@ OUT=${2:-${BOOK_NAME}_with_papers.pdf}
 python3 -I tools/make_cited_keys.py . > build/cited_keys.json
 cp build/cited_keys.json tools/data/cited_keys.json
 pages=${BOOK_PAGES:-$(pdfinfo build/main.pdf | awk '/^Pages:/{print $2}')}
-for attempt in 1 2 3 4 5; do
+for _ in 1 2 3 4 5; do
   python3 -I tools/make_papers_listing.py --book-dir . --papers-dir "$PAPERS" --book-pages "$pages"
   latexmk -interaction=nonstopmode -halt-on-error main.tex > build/latexmk_out.txt 2>&1 || { tail -30 build/latexmk_out.txt; exit 1; }
   new=$(pdfinfo build/main.pdf | awk '/^Pages:/{print $2}')

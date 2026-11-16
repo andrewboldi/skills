@@ -1,0 +1,32 @@
+name: tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update -qq && sudo apt-get install -y -qq shellcheck
+      - name: shellcheck
+        run: shellcheck -x -S warning install.sh tests/*.sh skills/*/scripts/*.sh skills/writing-napkin-books/template/tools/*.sh
+      - name: skills and the plugin list
+        run: python3 tests/check-skills.py
+      - name: hn-ready's scripts
+        run: bash tests/hn-ready-scripts.sh
+      - name: writing-napkin-books scaffold
+        run: bash tests/napkin-scaffold.sh
+      - name: Claude Code plugin manifest
+        run: npm install -g @anthropic-ai/claude-code && claude plugin validate .
+
+  install:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash tests/install-test.sh

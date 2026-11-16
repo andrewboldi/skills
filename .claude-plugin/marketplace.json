@@ -1,0 +1,25 @@
+{
+  "name": "andrewboldi-skills",
+  "owner": {
+    "name": "Andrew Boldi"
+  },
+  "metadata": {
+    "description": "Skills for coding agents: get a repo ready for Show HN, write a Napkin-style book"
+  },
+  "plugins": [
+    {
+      "name": "hn-ready",
+      "description": "Get a project ready for a Show HN launch: one-command install, short README, logo, real demo GIF, CI and a launch kit",
+      "source": "./",
+      "strict": false,
+      "skills": ["./skills/hn-ready"]
+    },
+    {
+      "name": "writing-napkin-books",
+      "description": "Write a long, readable, fact-checked book on any topic in the style of Evan Chen's Napkin: LaTeX template, build and check tools, agent briefs",
+      "source": "./",
+      "strict": false,
+      "skills": ["./skills/writing-napkin-books"]
+    }
+  ]
+}

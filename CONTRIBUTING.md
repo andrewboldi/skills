@@ -12,8 +12,9 @@ maintainers the same list of open work.
 1. Install bd:
    `curl -fsSL https://raw.githubusercontent.com/steveyegge/beads/main/scripts/install.sh | bash`
    or `brew install beads`.
-2. With push access, run `bd bootstrap` in your clone to get the issues, then `bd ready` to see
-   what's open.
+2. With push access, run `git config beads.role maintainer` and `bd bootstrap` in your clone to
+   get the issues, then `bd ready` to see what's open. bd fetches the issues over SSH
+   (`git@github.com`), so your GitHub account needs an SSH key.
 3. Before you start, run `bd update ID --claim`. For new work, run
    `bd create "Title" -t task -p 2`. When it's done, run `bd close ID`.
 4. From a fork, run `bd init --contributor` instead. It keeps your planning issues out of this

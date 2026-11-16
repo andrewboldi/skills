@@ -8,7 +8,7 @@
 
 <p align="center">
   <a href="https://github.com/andrewboldi/skills/actions/workflows/test.yml"><img alt="tests" src="https://img.shields.io/github/actions/workflow/status/andrewboldi/skills/test.yml?branch=main&label=tests&style=flat-square"></a>
-  <a href="LICENSE"><img alt="MIT license" src="https://img.shields.io/github/license/andrewboldi/skills?style=flat-square"></a>
+  <a href="LICENSE"><img alt="MIT license" src="https://img.shields.io/github/license/andrewboldi/skills?style=flat-square&label=license"></a>
   <a href="https://agentskills.io"><img alt="agent skills" src="https://img.shields.io/badge/agent-skills-e8a33d?style=flat-square"></a>
 </p>
 

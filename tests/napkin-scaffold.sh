@@ -30,7 +30,7 @@ check "the output file name comes from the short title" yes \
 	"$(grep -q 'QEC_Guide' "$D/book/tools/book.env" && echo yes || echo no)"
 check "the book gets its own git repository" yes "$([ -d "$D/book/.git" ] && echo yes || echo no)"
 
-python3 -m py_compile "$skill"/template/tools/*.py "$skill"/template/figures/src/*.py 2> "$D/compile"
+PYTHONPYCACHEPREFIX="$D/pycache" python3 -m py_compile "$skill"/template/tools/*.py "$skill"/template/figures/src/*.py 2> "$D/compile"
 check "the template's Python tools compile" "" "$(cat "$D/compile")"
 
 echo "passed=$pass failed=$fail"

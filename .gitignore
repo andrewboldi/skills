@@ -5,3 +5,8 @@
 .beads-credential-key
 __pycache__/
 *.pyc
+
+# colab-browser installs playwright-core next to its scripts
+skills/*/scripts/node_modules/
+skills/*/scripts/package.json
+skills/*/scripts/package-lock.json

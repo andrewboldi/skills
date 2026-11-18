@@ -30,6 +30,7 @@ python3 tests/check-skills.py   # each SKILL.md as an agent reads it, and the pl
 bash tests/install-test.sh      # install.sh against a throwaway home folder
 bash tests/hn-ready-scripts.sh  # hn-ready's submit-link builder and README checker
 bash tests/napkin-scaffold.sh   # writing-napkin-books scaffolds a book
+bash tests/colab-browser-scripts.sh  # colab-browser's scripts, with no browser or account
 ```
 
 CI runs them on Linux, and the installer test on macOS too. It also runs shellcheck and

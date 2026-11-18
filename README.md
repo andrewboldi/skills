@@ -22,8 +22,10 @@
 
 Ever asked a coding agent to get a project ready to share, and got back a 400-line README with
 a list of requirements? These skills give Claude Code, Codex, opencode and other agents a tested
-method for two big jobs: getting a repo ready for a Show HN launch, and writing a book-length
-guide to any topic in the style of Evan Chen's Napkin.
+method for three jobs:
+- getting a repo ready for a Show HN launch;
+- writing a book-length guide to any topic in the style of Evan Chen's Napkin;
+- running GPU jobs on Google Colab without wasting compute units.
 
 <p align="center">
   <img src="assets/demo.gif" alt="Claude Code is asked to make a small repo HN-ready. It loads the hn-ready skill, audits the repo and its git history, and hands back numbered proposals: a token left in the history, a personal path in a test fixture, one install command, a README rewrite, bd for tracking work, a logo, a demo and a launch kit. Then it asks which to do." width="820">
@@ -52,6 +54,19 @@ field in one PDF, in the style of Evan Chen's *An Infinitely Large Napkin*.
   source the reader could open, and every number is recomputed.
 - **A LaTeX template and checks.** `tools/check.sh` builds the book and fails on unresolved
   citations, broken references and unwritten sections.
+
+**[colab-browser](skills/colab-browser/SKILL.md)** runs GPU jobs on Google Colab through a real
+browser that you sign in to.
+- **You sign in and give consent; the agent does the rest.** It opens its own browser profile and
+  asks you to sign in, then builds and runs the notebook. It never clicks a consent or licence
+  button for you.
+- **No wasted compute units.**
+  - Every notebook streams its output, prints a heartbeat with GPU use, saves results to Drive as
+    they finish, and releases its runtime by itself.
+  - A watch loop stops runtimes that sit idle.
+  - It checks the job's own evidence before stopping anything that is running.
+- **The traps that cost units:** invisible subprocess output, Drive's caching and lag, settings
+  sized for the wrong GPU, and CPU-only rendering.
 
 ## Install
 

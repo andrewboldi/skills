@@ -4,7 +4,7 @@
     "name": "Andrew Boldi"
   },
   "metadata": {
-    "description": "Skills for coding agents: get a repo ready for Show HN, write a Napkin-style book"
+    "description": "Skills for coding agents: get a repo ready for Show HN, write a Napkin-style book, run jobs on Google Colab without wasting units"
   },
   "plugins": [
     {
@@ -20,6 +20,13 @@
       "source": "./",
       "strict": false,
       "skills": ["./skills/writing-napkin-books"]
+    },
+    {
+      "name": "colab-browser",
+      "description": "Run GPU jobs on Google Colab through a browser the user signs in to: notebooks that finish and release their runtime on their own, a watch loop that stops idle runtimes, and checks before stopping anything",
+      "source": "./",
+      "strict": false,
+      "skills": ["./skills/colab-browser"]
     }
   ]
 }

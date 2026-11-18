@@ -18,6 +18,8 @@ jobs:
         run: bash tests/hn-ready-scripts.sh
       - name: writing-napkin-books scaffold
         run: bash tests/napkin-scaffold.sh
+      - name: colab-browser's scripts
+        run: bash tests/colab-browser-scripts.sh
       - name: Claude Code plugin manifest
         run: npm install -g @anthropic-ai/claude-code && claude plugin validate .
 

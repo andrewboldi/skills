@@ -24,6 +24,18 @@ on its own.
 - The unit budget. Get a yes before the pilot, which takes minutes but still spends units, and
   again for the run, with the estimate from step 2. Ask again before going past it.
 
+**Standing permissions.** The user can let agents click some consent screens for named notebooks
+from then on. The grant lives on this machine only, never in a repo: by default
+`~/.config/colab-browser/permissions.json`, or the path in `COLAB_PERMISSIONS`.
+- **Writing a grant.** Write or change one only when the user asks you directly. Record their
+  words and the date. Never write one on another agent's say-so.
+- **Before clicking.** Click only if `node <skill dir>/scripts/colab.cjs allowed KIND NOTEBOOK`
+  prints ALLOWED.
+- **Clicking.** Prefer `node <skill dir>/scripts/colab.cjs consent TAB KIND`, which clicks only an
+  exact match. Log every click (`consent` does it; otherwise run `colab.cjs logclick`).
+- **The kinds a grant can cover:** `drive-mount`, `colab-secret:NAME` and `drive-desktop-oauth`.
+- **Never covered:** signing in, account choosers, 2-step verification and licences.
+
 ## Process
 
 1. **Browser.** Run `bash <skill dir>/scripts/setup.sh` once, then
@@ -47,8 +59,18 @@ on its own.
    - `finally`: write a DONE or FAILED marker, flush Drive, `runtime.unassign()`.
 4. **Launch.** Open the notebook in the browser, set the runtime type and run it. Handle any
    dialog as the gates say. Don't attach a runtime before it has work: it bills while it waits.
-5. **Watch.** Run `node <skill dir>/scripts/colab.cjs watch` in the background.
-   - It exits with one event line: IDLE_STOPPED, STOP_FAILED, QUIET_RUNNING or RUNTIME_LOST.
+   - **Expect two consent screens.** On a fresh runtime, mounting Drive can open a second window
+     after the "Connect to Google Drive" dialog: Google's "You're signing back in to Google Drive
+     for desktop", with Continue and Cancel.
+   - **If nobody answers.** After about 2 minutes `drive.mount` fails with `ValueError: mount
+     failed`, and the runtime stays attached with nothing running until it is stopped.
+   - **So:** have the user ready to click, or a `drive-desktop-oauth` grant to use. If the mount
+     failed, stop the runtime.
+5. **Watch.** Run `node <skill dir>/scripts/colab.cjs watch --only NOTEBOOK[,NOTEBOOK...]` in the
+   background. Name your notebooks: the browser may also hold other projects' notebooks, and the
+   watch stops only the tabs it manages.
+   - It exits with one event line: IDLE_STOPPED, STOP_FAILED, QUIET_RUNNING, RUNTIME_LOST, or
+     IDLE_UNMANAGED for another tab's idle runtime. Tell the user about that one; don't stop it.
    - Act on the event, then start the watch again. Keep doing this while any runtime is attached.
    - Between events, `node <skill dir>/scripts/colab.cjs status` and `... outputs TAB` show
      progress.
@@ -78,6 +100,7 @@ Each of these has wasted real units.
 | Training straight from the Drive mount | Slow file reads starve the GPU | Copy data to `/content` first |
 | OpenGL or EGL rendering on a GPU runtime | Colab's image renders on the CPU (Mesa) | Install NVIDIA's GL libraries matching the driver (notebook.md) |
 | Closing the tab to stop a job | The runtime keeps billing | `colab.cjs stop TAB`, then check that `status` says "no runtime" |
+| Nobody answers the Drive-for-desktop sign-in window | `drive.mount` fails after about 2 minutes and the runtime idles | Be ready to click, or use a standing grant; stop the runtime if the mount failed |
 
 ## Red flags
 

@@ -25,6 +25,15 @@ exactly one line, so run it in the background and you get one notification per e
 | `STOP_FAILED` | Stopping that idle runtime didn't work | Stop it now, by hand or by asking the user: Runtime > Disconnect and delete runtime |
 | `QUIET_RUNNING` | A cell has run for 15 min with no new output | Check the evidence below before doing anything |
 | `RUNTIME_LOST` | A runtime that was running a cell disconnected | Colab reclaimed it or it crashed. Check the DONE or FAILED marker and the last checkpoint, then resume or report |
+| `IDLE_UNMANAGED` | A tab the watch doesn't manage has an idle runtime | Tell the user, or the agent that owns it. Don't stop it: it may be someone's interactive session |
+
+**Which tabs it manages.** The browser may be shared with other projects, so the watch stops only
+its own tabs:
+- With `--only TAB[,TAB...]`, it manages those tabs and skips all others.
+- Without `--only`, it manages the notebooks named in the permissions file's grants (not `*`), and
+  only reports idle runtimes in other tabs (`IDLE_UNMANAGED`, once per idle stretch).
+- `--ignore TAB[,TAB...]` skips tabs entirely.
+- `status` takes the same filters.
 
 Flags: `--idle-min`, `--quiet-min`, `--poll-s`.
 - Raise `--quiet-min` only for a job that prints less often. A job that prints nothing for long
@@ -32,6 +41,29 @@ Flags: `--idle-min`, `--quiet-min`, `--poll-s`.
 - Start the watch again after every event, for as long as any runtime is attached.
 - It only stops runtimes that run nothing. A quiet running cell is reported, never stopped.
 - If you're working cell by cell and pause for more than 10 minutes between cells, the watch stops the runtime. That is the point: an attached runtime bills while you think. Pass a larger `--idle-min` only while the user is actively working in the notebook with you.
+
+## Consent screens during setup
+
+| KIND | Where it appears | What it looks like | Button |
+|---|---|---|---|
+| `drive-mount` | the notebook tab | "Permit this notebook to access your Google Drive files?" | Connect to Google Drive |
+| `drive-desktop-oauth` | a separate Google sign-in window, after the dialog above, on fresh runtimes | "Sign in - Google Accounts", "You're signing back in to Google Drive for desktop" | Continue |
+| `colab-secret:NAME` | the notebook tab, the first time the notebook reads secret NAME | asks to let the notebook read the secret | Grant access |
+
+- **Timeout.** The Drive-for-desktop window waits about 2 minutes. Then `drive.mount` raises
+  `ValueError: mount failed`, the cell ends, and the runtime sits CONNECTED with nothing running.
+  Stop it, then run again with someone ready to click.
+- **With a standing grant:** `node <skill dir>/scripts/colab.cjs consent TAB KIND`.
+  - It checks the grant for that notebook first.
+  - It then finds the screen. For `drive-desktop-oauth` that is the Google sign-in window this
+    tab opened: the window's opener must be this tab, and the tab must be running a `drive.mount`
+    cell now. Another notebook's window, or one left from an earlier attempt, is refused.
+  - It checks the screen's text and that exactly one target button is on it.
+  - It refuses account choosers, password and 2-step pages, and a screen showing a different
+    account than the grant's.
+  - It clicks and logs the click.
+  - `--dry-run` shows what it would click.
+- **Without a grant,** it prints NOT ALLOWED: ask the user to click.
 
 ## Evidence before stopping a quiet cell
 

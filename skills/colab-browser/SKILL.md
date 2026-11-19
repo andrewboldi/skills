@@ -59,13 +59,17 @@ from then on. The grant lives on this machine only, never in a repo: by default
    - `finally`: write a DONE or FAILED marker, flush Drive, `runtime.unassign()`.
 4. **Launch.** Open the notebook in the browser, set the runtime type and run it. Handle any
    dialog as the gates say. Don't attach a runtime before it has work: it bills while it waits.
-   - **Expect two consent screens.** On a fresh runtime, mounting Drive can open a second window
-     after the "Connect to Google Drive" dialog: Google's "You're signing back in to Google Drive
-     for desktop", with Continue and Cancel.
+   - **Expect more consent screens.** On a fresh runtime, mounting Drive can open a Google
+     sign-in window after the "Connect to Google Drive" dialog. It can show two screens in turn,
+     each with Continue and Cancel: "You're signing back in to Google Drive for desktop", then
+     "Google Drive for desktop wants access to your Google Account". The mount waits for both.
    - **If nobody answers.** After about 2 minutes `drive.mount` fails with `ValueError: mount
-     failed`, and the runtime stays attached with nothing running until it is stopped.
-   - **So:** have the user ready to click, or a `drive-desktop-oauth` grant to use. If the mount
-     failed, stop the runtime.
+     failed`, and the runtime stays attached with nothing running until it is stopped. Mount with
+     `drive.mount('/content/drive', timeout_ms=600000)` when a person may have to click.
+   - **So:** have the user ready to click, or a `drive-desktop-oauth` grant to use; `consent`
+     clicks through both screens. If the mount failed, stop the runtime.
+   - **Don't reload the notebook tab while a mount waits,** and close sign-in windows left from
+     a failed mount (`colab.cjs popups --close`) before you run it again.
 5. **Watch.** Run `node <skill dir>/scripts/colab.cjs watch --only NOTEBOOK[,NOTEBOOK...]` in the
    background. Name your notebooks: the browser may also hold other projects' notebooks, and the
    watch stops only the tabs it manages.

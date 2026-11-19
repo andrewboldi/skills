@@ -20,7 +20,7 @@ node --check "$s/colab.cjs"
 check "colab.cjs parses" 0 $?
 node "$s/colab.cjs" help > "$D/help"
 check "colab.cjs help exits 0" 0 $?
-check "help lists the commands" 7 "$(grep -cE '^  node colab.cjs (status|outputs|stop|watch|allowed|logclick|consent)' "$D/help")"
+check "help lists the commands" 8 "$(grep -cE '^  node colab.cjs (status|outputs|stop|watch|allowed|logclick|consent|popups)' "$D/help")"
 
 rule() { node -e 'const c = require(process.argv[1]); console.log(c.isDisconnected(process.argv[2]))' "$s/colab.cjs" "$1"; }
 check "Reconnect means no runtime" true "$(rule 'Reconnect L4 arrow_drop_down')"
@@ -78,6 +78,12 @@ check "two target buttons: no click" no "$(mc drive-mount "$mount" 2)"
 check "a secret-access dialog matches its secret" ok "$(mc colab-secret:HF_TOKEN 'Notebook does not have access to secret HF_TOKEN Grant access' 1)"
 check "and not another secret" no "$(mc colab-secret:OTHER_KEY 'Notebook does not have access to secret HF_TOKEN Grant access' 1)"
 check "an unknown kind is refused" no "$(mc licence 'Agree and access repository' 1)"
+oauth2="Sign in - Google Accounts Google Drive for desktop wants access to your Google Account user@example.com Google Drive for desktop already has some access Cancel Continue"
+check "the second desktop screen matches" ok "$(mc drive-desktop-oauth "$oauth2" 1 user@example.com)"
+check "another app's access screen is refused" no "$(mc drive-desktop-oauth "Sign in - Google Accounts Photo Sync wants access to your Google Account user@example.com Cancel Continue" 1 user@example.com)"
+mcu() { node -e 'const c = require(process.argv[1]); const r = c.matchConsent(process.argv[2], {text: process.argv[3], count: 1, unchecked: Number(process.argv[4])}); console.log(r.ok ? "ok" : "no")' "$s/colab.cjs" "$@"; }
+check "a screen with unticked access boxes is refused" no "$(mcu drive-desktop-oauth "$oauth2" 2)"
+check "a screen with every box ticked matches" ok "$(mcu drive-desktop-oauth "$oauth2" 0)"
 
 # Which tabs a watch may stop: --only ones, else the permissions file's notebooks; others are only reported.
 pol() { node -e 'const c = require(process.argv[1]); const perms = JSON.parse(require("fs").readFileSync(process.argv[2], "utf8")); console.log(c.tabPolicy(process.argv[3], c.parseFlags(JSON.parse(process.argv[4])), perms))' "$s/colab.cjs" "$D/perm.json" "$@"; }

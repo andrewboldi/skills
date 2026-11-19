@@ -24,10 +24,13 @@
 //                                              append a timestamped line to the clicks log
 //   node colab.cjs consent TAB KIND [--dry-run]
 //                                              click a granted consent screen for that tab's notebook, only if
-//                                              it is on screen and matches exactly, and log the click
+//                                              it is on screen and matches exactly, and log the click; for
+//                                              drive-desktop-oauth, go on through each screen of the sign-in window
+//   node colab.cjs popups [--close]            the Google sign-in windows open, with the tab that opened each;
+//                                              --close closes them all, but only while no tab is mounting Drive
 //
 // TAB is a substring of the tab title (e.g. the notebook's file name) that must match exactly one Colab tab.
-// KIND is drive-mount, drive-desktop-oauth, or colab-secret:NAME.
+// KIND is drive-mount, drive-desktop-oauth (Google's Drive-for-desktop sign-in window), or colab-secret:NAME.
 // Environment: COLAB_CDP_PORT (default 9222); PLAYWRIGHT_CORE (path to a playwright-core install, optional);
 // COLAB_PERMISSIONS (default ~/.config/colab-browser/permissions.json); COLAB_CLICKS_LOG (default: clicks.log
 // next to it).
@@ -77,12 +80,18 @@ function logClick(kind, notebook, note) {
 }
 
 // The screens a grant can cover. A screen matches when all its `needs` texts are on it, none of the NEVER texts
-// are, and exactly one button has its label. Sign-in, account choosers, 2-step verification and licences are
-// never covered, whatever a grant says.
+// are, no box on it is left unticked, and exactly one button has its label. Sign-in, account choosers, 2-step
+// verification and licences are never covered, whatever a grant says.
 const NEVER = [/choose an account/i, /enter your password/i, /2-step verification/i, /verify it.?s you/i, /agree and access/i];
 const SCREENS = {
   'drive-mount': { where: 'tab', needs: [/access your Google Drive files/i], button: 'Connect to Google Drive' },
-  'drive-desktop-oauth': { where: 'popup', needs: [/Google Drive for desktop/i, /signing back in/i], button: 'Continue' },
+  // Google's Drive-for-desktop window shows one or both of these screens, each with Continue: "You're signing
+  // back in to Google Drive for desktop", then "Google Drive for desktop wants access to your Google Account".
+  'drive-desktop-oauth': {
+    where: 'popup',
+    needs: [/Google Drive for desktop/i, /signing back in|wants access to your Google Account/i],
+    button: 'Continue',
+  },
 };
 function screenFor(kind) {
   if (SCREENS[kind]) return SCREENS[kind];
@@ -95,6 +104,7 @@ function matchConsent(kind, screen, account) {
   const text = screen.text || '';
   for (const r of NEVER) if (r.test(text)) return { ok: false, reason: `a screen no grant covers (${r.source})` };
   for (const r of spec.needs) if (!r.test(text)) return { ok: false, reason: `not the ${kind} screen (no ${r.source})` };
+  if (screen.unchecked) return { ok: false, reason: `the screen asks which access to give (${screen.unchecked} unticked boxes)` };
   const emails = (text.match(/[\w.+-]+@[\w-]+(\.[\w-]+)+/g) || []).map((e) => e.toLowerCase());
   if (account && emails.length && !emails.includes(account.toLowerCase())) {
     return { ok: false, reason: 'the screen shows a different account than the grant' };
@@ -121,6 +131,60 @@ async function readScreen(page, button) {
   return { text, count };
 }
 
+async function cdpTargetId(page) {
+  const s = await page.context().newCDPSession(page);
+  try { return (await s.send('Target.getTargetInfo')).targetInfo.targetId; } finally { await s.detach().catch(() => {}); }
+}
+
+// Every Google sign-in window, with the tab that opened it. Chrome records the opener itself
+// (Target.getTargets); Playwright's opener() misses it when it attached the window before its opener.
+async function signInWindows(browser) {
+  const s = await browser.newBrowserCDPSession();
+  const { targetInfos } = await s.send('Target.getTargets');
+  await s.detach().catch(() => {});
+  const openerOf = new Map(targetInfos.map((t) => [t.targetId, t.openerId || '']));
+  const wins = [];
+  for (const ctx of browser.contexts()) for (const p of ctx.pages()) {
+    if (!p.url().startsWith('https://accounts.google.com/')) continue;
+    const id = await cdpTargetId(p).catch(() => '');
+    const pw = await p.opener().catch(() => null);
+    const born = await p.evaluate(() => performance.timeOrigin).catch(() => 0);
+    wins.push({ page: p, openerId: openerOf.get(id) || '', openerUrl: pw ? pw.url().split('#')[0] : '', born });
+  }
+  return wins;
+}
+
+const mountingNow = (page) => page.evaluate(() => {
+  const c = document.querySelector('.cell.running');
+  return !!c && /drive\.mount\(/.test(c.innerText);
+}).catch(() => false);
+
+const uncheckedBoxes = (page) => page.evaluate(() => [...document.querySelectorAll('input[type=checkbox], [role=checkbox]')]
+  .filter((e) => e.offsetParent !== null && (e.type === 'checkbox' ? !e.checked : e.getAttribute('aria-checked') !== 'true')).length);
+
+async function scrollToEnd(page) {
+  await page.evaluate(() => {
+    for (const el of [document.scrollingElement, ...document.querySelectorAll('*')]) {
+      if (el && el.scrollHeight > el.clientHeight + 4) el.scrollTop = el.scrollHeight;
+    }
+  }).catch(() => {});
+  await page.waitForTimeout(500);
+}
+
+// After a click in a sign-in window: 'closed', 'changed' (a new screen, the same in two reads a second
+// apart), or 'unchanged' after ms.
+async function nextScreen(page, before, button, ms) {
+  let last = null;
+  for (const end = Date.now() + ms; Date.now() < end;) {
+    await new Promise((r) => setTimeout(r, 1000));
+    if (page.isClosed()) return 'closed';
+    const t = await readScreen(page, button).then((s) => s.text).catch(() => null);
+    if (t !== null && t !== before && t === last) return 'changed';
+    last = t;
+  }
+  return page.isClosed() ? 'closed' : 'unchanged';
+}
+
 async function consent(browser, page, notebook, kind, dry) {
   const grant = findGrant(readPermissions(), kind, notebook);
   if (!grant) { console.log(`NOT ALLOWED ${kind} ${notebook}: no standing grant; ask the user`); return 3; }
@@ -132,29 +196,52 @@ async function consent(browser, page, notebook, kind, dry) {
   if (spec.where === 'popup') {
     // The sign-in window must belong to this tab, and this tab must be mounting Drive right now: another
     // notebook's window, or one left over from an earlier attempt, is not covered by this tab's grant.
-    const popups = [];
-    for (const ctx of browser.contexts()) for (const p of ctx.pages()) {
-      if (!p.url().startsWith('https://accounts.google.com/')) continue;
-      const opener = await p.opener().catch(() => null);
-      if (opener && opener.url().split('#')[0] === page.url().split('#')[0]) popups.push(p);
+    if (!(await mountingNow(page))) { console.log('NOT CLICKED: this tab is not running a drive.mount cell now; the window is stale'); return 4; }
+    const tabId = await cdpTargetId(page);
+    const tabUrl = page.url().split('#')[0];
+    const wins = await signInWindows(browser);
+    let mine = wins.filter((w) => w.openerId === tabId || w.openerUrl === tabUrl);
+    if (!mine.length && wins.length === 1 && !wins[0].openerId && !wins[0].openerUrl) {
+      // Chrome kept no opener for the only sign-in window. It is this tab's if no other tab is mounting Drive.
+      let others = 0;
+      for (const p of colabPages(browser)) if (p !== page && await mountingNow(p)) others++;
+      if (!others) { mine = wins; console.log('note: the only sign-in window has no recorded opener, and only this tab is mounting Drive'); }
     }
-    if (popups.length !== 1) {
-      console.log(`NOT CLICKED: ${popups.length} Google sign-in windows were opened by this tab; need exactly one`);
+    if (!mine.length) {
+      console.log(`NOT CLICKED: no Google sign-in window from this tab yet (${wins.length} open in all); try again in a few seconds`);
       return 4;
     }
-    const mounting = await page.evaluate(() => {
-      const c = document.querySelector('.cell.running');
-      return !!c && /drive\.mount\(/.test(c.innerText);
-    });
-    if (!mounting) { console.log('NOT CLICKED: this tab is not running a drive.mount cell now; the window is stale'); return 4; }
-    target = popups[0];
+    mine.sort((a, b) => b.born - a.born);
+    if (mine.length > 1) console.log(`note: using the newest of ${mine.length} sign-in windows from this tab; close the rest with  colab.cjs popups --close  once no mount is running`);
+    target = mine[0].page;
   }
-  const m = matchConsent(kind, await readScreen(target, spec.button), grant.account);
-  if (!m.ok) { console.log(`NOT CLICKED: ${m.reason}`); return 4; }
-  if (dry) { console.log(`would click "${m.button}" for ${kind} in ${notebook}`); return 0; }
-  await target.getByRole('button', { name: m.button, exact: true }).click();
-  console.log(logClick(kind, notebook, `clicked "${m.button}" (grant of ${grant.granted || 'unknown date'})`));
-  return 0;
+  for (let clicks = 0; ;) {
+    const screen = await readScreen(target, spec.button);
+    if (spec.where === 'popup') screen.unchecked = await uncheckedBoxes(target);
+    const m = matchConsent(kind, screen, grant.account);
+    if (!m.ok && clicks) {
+      // Not one of this kind's screens any more, after our clicks: say what is there and let the caller check the cell.
+      console.log(`clicked ${clicks} screen(s); the window now shows: ${screen.text.trim().slice(0, 160)}`);
+      console.log('check that the drive.mount cell printed "Mounted at"; if not, ask the user to look at the window');
+      return 0;
+    }
+    if (!m.ok) { console.log(`NOT CLICKED: ${m.reason}`); return 4; }
+    if (dry) { console.log(`would click "${m.button}" for ${kind} in ${notebook}`); return 0; }
+    if (spec.where === 'popup') await scrollToEnd(target);
+    try {
+      await target.getByRole('button', { name: m.button, exact: true }).click({ timeout: 15000 });
+    } catch (e) {
+      if (!target.isClosed()) throw e;   // the window closed as it was clicked: the click went through
+    }
+    clicks++;
+    console.log(logClick(kind, notebook, `clicked "${m.button}"${clicks > 1 ? ` on screen ${clicks}` : ''} (grant of ${grant.granted || 'unknown date'})`));
+    if (spec.where !== 'popup') return 0;
+    // Google can ask again in the same window ("... wants access to your Google Account"): go on through it.
+    const next = await nextScreen(target, screen.text, spec.button, 20000);
+    if (next === 'closed') { console.log('the sign-in window closed: sign-in done'); return 0; }
+    if (next === 'unchanged') { console.log('NOT DONE: the window shows the same screen 20 s after the click; ask the user to look'); return 4; }
+    if (clicks >= 3) { console.log('NOT DONE: the window is still open after 3 screens; ask the user to look'); return 4; }
+  }
 }
 
 function loadPlaywright() {
@@ -388,6 +475,25 @@ async function main() {
     const rc = await consent(browser, page, bareName(st.title), kind, flag === '--dry-run');
     await browser.close();
     process.exit(rc);
+  } else if (cmd === 'popups') {
+    const wins = await signInWindows(browser);
+    const tabOf = new Map();
+    for (const p of pages) tabOf.set(await cdpTargetId(p).catch(() => ''), p);
+    if (!wins.length) console.log('no Google sign-in windows open');
+    for (const w of wins) {
+      const opener = tabOf.get(w.openerId) || pages.find((p) => p.url().split('#')[0] === w.openerUrl);
+      const text = await readScreen(w.page, 'Continue').then((s) => s.text.trim()).catch(() => '');
+      console.log(`${opener ? (await opener.title()).replace(/ - Colab$/, '') : 'opener unknown'} | ${text.slice(0, 120)}`);
+    }
+    if (args[0] === '--close' && wins.length) {
+      let mounting = 0;
+      for (const p of pages) if (await mountingNow(p)) mounting++;
+      if (mounting) console.log(`NOT CLOSED: ${mounting} tab(s) are mounting Drive now; close them once no mount is running`);
+      else {
+        for (const w of wins) await w.page.close().catch(() => {});
+        console.log(`closed ${wins.length} sign-in window(s)`);
+      }
+    }
   } else if (cmd === 'stop') {
     const [, page] = pickOne(pages, states, args[0] || '');
     try { const s = await stop(page); console.log(`stopped: ${s.title}`); }

@@ -47,7 +47,7 @@ Flags: `--idle-min`, `--quiet-min`, `--poll-s`.
 | KIND | Where it appears | What it looks like | Button |
 |---|---|---|---|
 | `drive-mount` | the notebook tab | "Permit this notebook to access your Google Drive files?" | Connect to Google Drive |
-| `drive-desktop-oauth` | a separate Google sign-in window, after the dialog above, on fresh runtimes | "Sign in - Google Accounts", "You're signing back in to Google Drive for desktop" | Continue |
+| `drive-desktop-oauth` | a separate Google sign-in window, after the dialog above, on fresh runtimes | "Sign in - Google Accounts", then one or both of "You're signing back in to Google Drive for desktop" and "Google Drive for desktop wants access to your Google Account" | Continue, on each screen |
 | `colab-secret:NAME` | the notebook tab, the first time the notebook reads secret NAME | asks to let the notebook read the secret | Grant access |
 
 - **Timeout.** The Drive-for-desktop window waits about 2 minutes. Then `drive.mount` raises
@@ -56,8 +56,14 @@ Flags: `--idle-min`, `--quiet-min`, `--poll-s`.
 - **With a standing grant:** `node <skill dir>/scripts/colab.cjs consent TAB KIND`.
   - It checks the grant for that notebook first.
   - It then finds the screen. For `drive-desktop-oauth` that is the Google sign-in window this
-    tab opened: the window's opener must be this tab, and the tab must be running a `drive.mount`
-    cell now. Another notebook's window, or one left from an earlier attempt, is refused.
+    tab opened: the tab must be running a `drive.mount` cell now, and Chrome must record this tab
+    as the window's opener. If Chrome kept no opener, it takes the window only when it is the one
+    sign-in window open and no other tab is mounting Drive. If this tab opened several, it takes
+    the newest. Another notebook's window is refused.
+  - For `drive-desktop-oauth` it goes on through each screen of the window, up to 3, until the
+    window closes. A screen that asks which access to give (unticked boxes) is left to the user.
+  - `colab.cjs popups` lists the sign-in windows and the tab that opened each; `popups --close`
+    closes them, only while no tab is mounting Drive.
   - It checks the screen's text and that exactly one target button is on it.
   - It refuses account choosers, password and 2-step pages, and a screen showing a different
     account than the grant's.

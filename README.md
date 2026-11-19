@@ -56,7 +56,8 @@ field in one PDF, in the style of Evan Chen's *An Infinitely Large Napkin*.
   citations, broken references and unwritten sections.
 
 **[colab-browser](skills/colab-browser/SKILL.md)** runs GPU jobs on Google Colab with Google's
-official `colab` CLI, and falls back to a real browser you sign in to for notebooks and Drive.
+official `colab` CLI, mounts Google Drive on its sessions, and falls back to a real browser you sign in to
+for notebooks.
 - **Jobs that look after themselves.** A small runner inside the VM streams the job's log, writes a
   heartbeat with GPU use, stops at a deadline, and releases the runtime when the job is done, even if
   the agent is gone.

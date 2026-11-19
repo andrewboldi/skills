@@ -20,7 +20,9 @@ node --check "$s/colab.cjs"
 check "colab.cjs parses" 0 $?
 node "$s/colab.cjs" help > "$D/help"
 check "colab.cjs help exits 0" 0 $?
-check "help lists the commands" 9 "$(grep -cE '^  node colab.cjs (status|outputs|stop|watch|allowed|logclick|consent|popups|cli-signin)' "$D/help")"
+check "help lists the commands" 10 "$(grep -cE '^  node colab.cjs (status|outputs|stop|watch|allowed|logclick|consent|popups|cli-signin|cli-drivemount)' "$D/help")"
+COLAB_PERMISSIONS="$D/none.json" node "$s/colab.cjs" cli-drivemount sess > "$D/dm" 2>&1
+check "cli-drivemount without a grant refuses before doing anything" "3 1" "$? $(grep -c '^NOT ALLOWED drive-desktop-oauth colab-cli' "$D/dm")"
 
 rule() { node -e 'const c = require(process.argv[1]); console.log(c.isDisconnected(process.argv[2]))' "$s/colab.cjs" "$1"; }
 check "Reconnect means no runtime" true "$(rule 'Reconnect L4 arrow_drop_down')"
@@ -116,7 +118,8 @@ mkdir -p "$D/py/google/colab"
 : > "$D/py/google/__init__.py"
 : > "$D/py/google/colab/__init__.py"
 printf 'import os\ndef unassign():\n    open(os.environ["JOB_DIR"] + "/RELEASED", "w").write("x")\n' > "$D/py/google/colab/runtime.py"
-job() { rm -rf "$D/jd"; env PYTHONPATH="$D/py" JOB_DIR="$D/jd" JOB_CWD="$D" GRACE_MIN=0 "$@" python3 "$s/colab_job.py" > "$D/job.out" 2>&1; }
+printf 'import os\ndef flush_and_unmount():\n    open(os.environ["JOB_DIR"] + "/FLUSHED", "w").write("x")\n' > "$D/py/google/colab/drive.py"
+job() { rm -rf "$D/jd"; env PYTHONPATH="$D/py" JOB_DIR="$D/jd" JOB_CWD="$D" DRIVE_DIR="$D/drive" GRACE_MIN=0 "$@" python3 "$s/colab_job.py" > "$D/job.out" 2>&1; }
 job JOB_CMD='echo hello from the job'
 check "a job that succeeds is DONE" DONE "$(cat "$D/jd/STATUS")"
 check "the job's output time is recorded for the watch" 1 "$(ls "$D/jd/output" 2> /dev/null | wc -l | tr -d ' ')"
@@ -125,6 +128,12 @@ check "and it releases the runtime" 1 "$(ls "$D/jd/RELEASED" 2> /dev/null | wc -
 job JOB_CMD='exit 3'
 check "a job that fails says FAILED rc=N" "FAILED rc=3" "$(cat "$D/jd/STATUS")"
 check "and still releases the runtime" 1 "$(ls "$D/jd/RELEASED" 2> /dev/null | wc -l | tr -d ' ')"
+check "no Drive mounted: nothing to flush" 0 "$(ls "$D/jd/FLUSHED" 2> /dev/null | wc -l | tr -d ' ')"
+mkdir -p "$D/drive/MyDrive"
+job JOB_CMD='true'
+check "with Drive mounted, the runner flushes it" 1 "$(ls "$D/jd/FLUSHED" 2> /dev/null | wc -l | tr -d ' ')"
+check "and still releases the runtime after" 1 "$(ls "$D/jd/RELEASED" 2> /dev/null | wc -l | tr -d ' ')"
+rm -rf "$D/drive"
 job JOB_CMD='true' KEEP_RUNTIME=1
 check "KEEP_RUNTIME=1 keeps the runtime" 0 "$(ls "$D/jd/RELEASED" 2> /dev/null | wc -l | tr -d ' ')"
 # The deadline must stop the whole job, not just the shell: a pipeline and a ';' list both outlive a SIGTERM to sh.

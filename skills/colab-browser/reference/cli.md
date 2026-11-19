@@ -63,17 +63,21 @@ disagree, test on a CPU runtime before spending GPU units.
 
 ## Drive
 
-- **The flow.** `colab drivemount -s NAME` asks for a Drive consent in a browser, then reads Enter from
-  the terminal (`/dev/tty`).
-- **The test.** The consent link opened the "Google Drive for desktop" screens.
-  - The first attempt then failed with "Error propagating: 400".
-  - The second exited 0 with no output, yet the kernel had raised `ValueError: mount failed`.
-- **So:**
-  - Check a mount with `ls /content/drive/MyDrive`.
-  - Prefer ssh transfers.
-  - When a job needs Drive, run it as a notebook (`browser.md`).
-- **Shared browser.** Never pick a sign-in window by URL or tab order. That test's helper script picked
-  the newest Google sign-in window, which belonged to another notebook mounting Drive at the same moment.
+- **The flow.** `colab drivemount -s NAME` prints a Google consent link: the "Google Drive for desktop"
+  screens, each with Continue. After the clicks, the page shows "Please close this tab / window". The CLI
+  then waits for Enter, on `/dev/tty`, or on stdin when there is no terminal. Next it prints
+  "Credentials propagated" and "Mounted at /content/drive".
+- **Each new runtime asks again.**
+- **The exit code.** `drivemount` exits 0 even when the mount failed, so look for "Mounted at".
+- **Automated.** `colab.cjs cli-drivemount NAME` does the whole flow. Tested on a fresh CPU runtime:
+  mounted, and the VM listed MyDrive.
+- **The first failure, explained.** The first test failed with "Error propagating: 400" because its helper
+  script picked the newest Google sign-in window. That window belonged to another notebook mounting Drive
+  at the same moment, so this mount's consent was never given. Retrying in that same kernel failed at
+  once with `ValueError: mount failed`. If a mount fails, start a fresh runtime rather than retrying in
+  the same kernel.
+- **Shared browser.** Never pick a sign-in window by URL or tab order: click only on the page you opened,
+  or on the window whose opener is your tab.
 
 ## colab_job.py
 
@@ -85,6 +89,7 @@ disagree, test on a CPU runtime before spending GPU units.
 | `MAX_HOURS` | 3.5 | deadline; the job's whole process group gets SIGTERM, then SIGKILL after 30 s |
 | `GRACE_MIN` | 20 | how long to wait for `COLLECTED` before releasing anyway |
 | `KEEP_RUNTIME` | unset | 1 skips the release, only while someone works in the session by hand |
+| `DRIVE_DIR` | `/content/drive` | if Drive is mounted there, it is flushed before the release |
 | `HEARTBEAT_S` | 120 | seconds between heartbeats |
 
 `JOB_DIR/heartbeat` shows that the runner is alive. `JOB_DIR/output` is touched whenever the job itself

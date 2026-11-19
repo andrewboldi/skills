@@ -12,6 +12,8 @@
 #   GRACE_MIN    after the job ends, wait this long for COLLECTED, then release the runtime anyway (default 20)
 #   KEEP_RUNTIME set to 1 to skip the release (only while someone is working in the session by hand)
 #   HEARTBEAT_S  seconds between heartbeats (default 120)
+#   DRIVE_DIR    where Google Drive is mounted (default /content/drive). If it is mounted, the runner flushes
+#                it before the release, so every file the job wrote there reaches Drive
 import os, signal, subprocess, threading, time
 
 cmd = os.environ['JOB_CMD']
@@ -103,6 +105,11 @@ finally:
         print(f'[final] {status}', flush=True)
         log.write(f'[final] {status}\n')
         log.close()
+        drive_dir = os.environ.get('DRIVE_DIR', '/content/drive')
+        if os.path.isdir(os.path.join(drive_dir, 'MyDrive')):
+            from google.colab import drive
+            drive.flush_and_unmount()      # make sure Drive has every file before the runtime goes
+            print('[drive] flushed', flush=True)
         if os.environ.get('KEEP_RUNTIME') != '1':
             # The results are on the VM's disk: give the agent GRACE_MIN to download them and create COLLECTED.
             end = time.time() + grace * 60

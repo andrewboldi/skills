@@ -8,18 +8,15 @@ description: Use when work should run on Google Colab (GPU training, evaluation,
 There are two routes, and both spend the same compute units:
 - **The CLI** (`colab`, from Google's `google-colab-cli` package) starts runtimes, runs code, moves files,
   opens a shell on the VM, stops runtimes and shows the unit balance. Use it by default.
-- **The browser**: a dedicated browser the user signs in to, driven over the DevTools protocol. Use it
-  for notebooks the user wants to see, Google Drive mounts, and anything the CLI lacks. See
+- **The browser**: a dedicated browser the user signs in to, driven over the DevTools protocol. The CLI
+  route uses it for sign-in and Drive consent screens. Use it on its own for notebooks the user wants to
+  see, and anything the CLI lacks. See
   `<skill dir>/reference/browser.md`.
 
-**Choosing.** A CLI job keeps everything on the VM's own disk, which is erased when the runtime goes, and
-Drive does not mount reliably from the CLI. If no agent collects the results within the grace period, or
-Colab reclaims the VM mid-run, the checkpoints and results are lost. So:
-- **Short jobs**, where losing a run costs little: the CLI route, collected on FINISHED.
-- **Multi-hour runs whose checkpoints must survive:** either the job itself pushes each checkpoint and
-  result off the VM as it is written (for example to a private Hugging Face repo, with a token from the
-  environment), or use a browser notebook that saves to Drive. Never rely on an agent being there to pull
-  them down.
+**Results go to Drive.** The VM's own disk is erased when the runtime goes: when the job releases it,
+when nobody collects the results in time, or when Colab reclaims it mid-run. So mount Drive on every
+session that runs real work (step 4), and have the job write each checkpoint and result to
+`/content/drive/MyDrive/...` as soon as it exists. Never rely on an agent being there to pull them down.
 
 An attached runtime spends units whether or not anything runs, and the agent may be busy or gone when a
 job ends. So every job saves its results and releases its runtime on its own.
@@ -73,12 +70,22 @@ on. Grants live on this machine only, never in a repo: by default
      GPU that costs the fewest units for the whole job, which is not always the one with the lowest rate.
    - Always name sessions with `-s`. Sessions that `colab sessions` lists as `[?]` were started elsewhere,
      such as browser notebooks or other agents. Never stop them.
-4. **Code and data up.** Stream a tar over ssh:
+4. **Drive.** Run `node <skill dir>/scripts/colab.cjs cli-drivemount NAME` (needs the browser from step 2
+   and a `drive-desktop-oauth` grant for `colab-cli`).
+   - It runs `colab drivemount`, opens the consent link in a new page, clicks Continue on that page
+     only, and prints MOUNTED or NOT MOUNTED.
+   - Each new runtime asks again.
+   - Without a grant, run `colab drivemount -s NAME` yourself with `BROWSER=true`, open the link it prints
+     in the automation browser, and ask the user to click Continue there. Then press Enter for the CLI.
+   - `colab drivemount` exits 0 even when the mount failed, so check for "Mounted at", or
+     `ls /content/drive/MyDrive`.
+   - The runner flushes Drive before it releases the runtime.
+5. **Code and data up.** Stream a tar over ssh, or copy tars from Drive once it is mounted:
    `tar -C SRC -cf - . | colab ssh -s NAME --identity KEY -- 'mkdir -p /content/code && tar -C /content/code -xf -'`.
    - `colab upload` fails somewhere between 50 and 100 MB.
    - Large public data is faster fetched by the VM itself, for example from Hugging Face.
    - Check `df -h /content` first.
-5. **Launch** in the background:
+6. **Launch** in the background:
    `colab exec -s NAME --timeout 0 --env JOB_CMD='python -u train.py --resume' --env MAX_HOURS=3 -f <skill dir>/scripts/colab_job.py`.
    - The runner streams the job's output to `/content/job/log.txt`. It writes a heartbeat with GPU use every 2
      minutes and stops the whole job (every process of it) at `MAX_HOURS`. When the job ends, it writes
@@ -88,15 +95,15 @@ on. Grants live on this machine only, never in a repo: by default
    - The cell keeps running if the exec client dies or times out. So never launch a second time because
      the first launch "failed": check `/content/job` over ssh first.
    - Inside the job, follow section 3 of `notebook.md`: checkpoints, phase lines, GPU sizing.
-   - The VM's disk goes with the runtime. See **Choosing** above before a long run.
+   - The VM's disk goes with the runtime: write checkpoints and results to Drive as they appear.
    - The grace period bills too: put up to `GRACE_MIN` of GPU time per job in the unit estimate, or lower
      it when an agent will be watching.
-6. **Watch.** Run `bash <skill dir>/scripts/cli-watch.sh NAME[,NAME...]` in the background. It prints one
+7. **Watch.** Run `bash <skill dir>/scripts/cli-watch.sh NAME[,NAME...]` in the background. It prints one
    event and exits. Act on the event, then start it again while any of your sessions exists.
 
    | Event | What to do |
    |---|---|
-   | `FINISHED NAME STATUS` | Download the results (step 7). Reported once. The next watch waits for GONE |
+   | `FINISHED NAME STATUS` | Collect the results (step 8). Reported once. The next watch waits for GONE |
    | `GONE NAME` | The session is gone: released by the job, stopped, or reclaimed by Colab. Make sure the results were collected |
    | `QUIET NAME MIN` | The job printed nothing for 15 min. Look before stopping anything: `colab ssh ... -- 'tail /content/job/log.txt; nvidia-smi'` |
    | `NO_HEARTBEAT NAME MIN` | The runner's heartbeat stopped for 10 min: the runner or the kernel is stuck, so its deadline and release may not happen. Look now, and stop the session if it is dead |
@@ -104,7 +111,7 @@ on. Grants live on this machine only, never in a repo: by default
    | `STOP_FAILED NAME` | Stop it now: `colab stop -s NAME`, then check `colab sessions` |
    | `NO_CONTACT NAME` | ssh failed 3 polls in a row. Check by hand |
 
-7. **Finish.** Download the results:
+8. **Finish.** Download the results:
    `colab ssh -s NAME --identity KEY -- 'tar -C /content -cf - out job' < /dev/null | tar -xf - -C RESULTS`.
    - Check them, then let the runtime go: `colab ssh -s NAME --identity KEY -- touch /content/job/COLLECTED`,
      or `colab stop -s NAME`.
@@ -124,10 +131,10 @@ Each of these has wasted units or work.
 | `colab exec` to look at a running job | It queues behind the running cell | `colab ssh -s NAME --identity KEY -- CMD` |
 | `colab upload` of a big file | It fails somewhere between 50 and 100 MB | A tar over `colab ssh` |
 | `colab run` for a long job | If the client dies, the script keeps running, but nothing stops the VM afterwards | `colab_job.py`, which releases the VM itself |
-| Trusting `colab drivemount` | It needs a terminal and a browser consent. In a test it exited 0 although the mount failed | ssh transfers. For Drive, use the browser route |
+| Trusting `colab drivemount`'s exit code | It exits 0 even when the mount failed | `colab.cjs cli-drivemount`, which checks for "Mounted at" |
 | Stopping a `[?]` session | It is someone else's notebook or job | Stop only sessions you named |
-| Picking a sign-in window by URL or tab order | The browser is shared, so you click another notebook's window | `colab.cjs consent` and `cli-signin` follow the window's opener or the page they opened |
-| Results kept only on the VM | The runtime is released or reclaimed, and the results go with it | Download them on FINISHED. Long runs push checkpoints off the VM themselves, or run as a notebook with Drive |
+| Picking a sign-in window by URL or tab order | The browser is shared, so you click another notebook's window, and your own consent is never given. This made a Drive mount fail with "Error propagating: 400" | `colab.cjs consent`, `cli-signin` and `cli-drivemount` follow the window's opener or the page they opened |
+| Results kept only on the VM | The runtime is released or reclaimed, and the results go with it | Mount Drive and write checkpoints and results there as they appear |
 | Settings sized for a different GPU | A big GPU runs at a fraction of its capacity | Size at start, and print GPU utilisation in the heartbeat |
 | OpenGL or EGL rendering on a GPU runtime | Colab's image renders on the CPU (Mesa) | Install NVIDIA's GL libraries matching the driver (section 4 of `notebook.md`) |
 

@@ -30,6 +30,10 @@
 //                                              --close closes them all, but only while no tab is mounting Drive
 //   node colab.cjs cli-signin [--dry-run]      sign the Colab CLI in: open its sign-in link in this browser, click
 //                                              through the screens a colab-cli-signin grant covers, paste the code
+//   node colab.cjs cli-drivemount SESSION [PATH] [--dry-run]
+//                                              mount Google Drive on a CLI session: click the Drive-for-desktop
+//                                              consent on the page this mount opened (drive-desktop-oauth grant
+//                                              for colab-cli), then check the CLI printed "Mounted at"
 //
 // TAB is a substring of the tab title (e.g. the notebook's file name) that must match exactly one Colab tab.
 // KIND is drive-mount, drive-desktop-oauth (Google's Drive-for-desktop sign-in window), or colab-secret:NAME.
@@ -212,6 +216,74 @@ async function cliSignin(dry) {
     console.log(logClick('colab-cli-signin', 'colab-cli', m.action === 'tile' ? 'chose the one account offered' : 'clicked "Continue"'));
   }
   return giveUp('still not at the code page after 6 screens');
+}
+
+// Mount Google Drive on a CLI session: run `colab drivemount`, open the consent link it prints in a new page of
+// the automation browser, click through the Drive-for-desktop screens on THAT page only (never another
+// notebook's window), then tell the CLI to go on. drivemount exits 0 even when the mount fails, so success is
+// "Mounted at" in its output. Needs a drive-desktop-oauth grant for the notebook name colab-cli.
+async function cliDrivemount(name, mountPath, dry) {
+  const grant = findGrant(readPermissions(), 'drive-desktop-oauth', 'colab-cli');
+  if (!grant) { console.log('NOT ALLOWED drive-desktop-oauth colab-cli: no standing grant; ask the user'); return 3; }
+  const { spawn } = require('child_process');
+  // detached: no controlling terminal, so the CLI reads the go-ahead from stdin instead of /dev/tty.
+  const child = spawn(process.env.COLAB_BIN || 'colab', ['drivemount', '-s', name, ...(mountPath ? [mountPath] : [])],
+    { env: { ...process.env, BROWSER: 'true' }, detached: true });
+  let out = '';
+  child.stdout.on('data', (d) => { out += d; });
+  child.stderr.on('data', (d) => { out += d; });
+  const exited = new Promise((r) => child.on('close', r));
+  const mounted = () => /Mounted at \S+/.test(out);
+  const url = await new Promise((resolve) => {
+    const t = setInterval(() => {
+      const m = /https:\/\/accounts\.google\.com\/o\/oauth2\/v2\/auth\S+/.exec(out);
+      if (m) { clearInterval(t); resolve(m[0]); }
+    }, 300);
+    exited.then(() => { clearInterval(t); resolve(null); });
+    setTimeout(() => { clearInterval(t); resolve(null); }, 120000);
+  });
+  if (!url) {
+    child.kill();
+    if (mounted()) { console.log(`MOUNTED: ${/Mounted at \S+/.exec(out)[0]} (no consent was needed)`); return 0; }
+    console.log('NOT MOUNTED: the CLI printed no consent link; its output:\n' + out.slice(-600));
+    return 4;
+  }
+  const browser = await connect();
+  const page = await browser.contexts()[0].newPage();
+  await page.goto(url);
+  let clicks = 0;
+  for (let step = 0; step < 4; step++) {
+    await page.waitForTimeout(4000);
+    if (page.isClosed() || !page.url().startsWith('https://accounts.google.com/')) break;  // consent done
+    const screen = await readScreen(page, 'Continue');
+    screen.unchecked = await uncheckedBoxes(page);
+    const m = matchConsent('drive-desktop-oauth', screen, grant.account);
+    if (!m.ok) {
+      child.kill();
+      console.log(`NOT MOUNTED: ${m.reason}. The consent page is left open in the automation browser for the user`);
+      await browser.close();
+      return 4;
+    }
+    if (dry) {
+      console.log('would click "Continue" on the Drive consent page this mount opened');
+      child.kill(); await page.close(); await browser.close();
+      return 0;
+    }
+    await scrollToEnd(page);
+    await page.getByRole('button', { name: 'Continue', exact: true }).click({ timeout: 15000 }).catch((e) => {
+      if (!page.isClosed()) throw e;
+    });
+    clicks++;
+    console.log(logClick('drive-desktop-oauth', 'colab-cli', `clicked "Continue" for session ${name}${clicks > 1 ? ` on screen ${clicks}` : ''} (grant of ${grant.granted || 'unknown date'})`));
+  }
+  if (!page.isClosed()) await page.close();
+  await browser.close();
+  child.stdin.write('\n');
+  await Promise.race([exited, new Promise((r) => setTimeout(r, 180000))]);
+  if (mounted()) { console.log(`MOUNTED: ${/Mounted at \S+/.exec(out)[0]}`); return 0; }
+  child.kill();
+  console.log('NOT MOUNTED: ' + out.replace(/https:\S+/g, '<link>').slice(-600));
+  return 4;
 }
 
 async function readScreen(page, button) {
@@ -550,6 +622,11 @@ async function main() {
     return;
   }
   if (cmd === 'cli-signin') process.exit(await cliSignin(args[0] === '--dry-run'));
+  if (cmd === 'cli-drivemount') {
+    const pos = args.filter((a) => a !== '--dry-run');
+    if (!pos[0]) { console.error('usage: node colab.cjs cli-drivemount SESSION [PATH] [--dry-run]'); process.exit(2); }
+    process.exit(await cliDrivemount(pos[0], pos[1], args.includes('--dry-run')));
+  }
   const browser = await connect();
   const pages = colabPages(browser);
   const states = [];

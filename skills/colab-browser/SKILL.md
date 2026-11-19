@@ -88,7 +88,10 @@ from then on. The grant lives on this machine only, never in a repo: by default
    Then stop it with `node <skill dir>/scripts/colab.cjs stop TAB`, and confirm with `status`
    that the runtime is gone.
 7. **Finish.** Confirm the runtime has been released, copy the results down, and report the units
-   used against the estimate.
+   used against the estimate. Then close the notebook's tab, and any Drive page you opened. An
+   open Colab or Drive page keeps growing, to gigabytes over a day, and that memory is taken from
+   everything else on the machine, other agents' work included. The notebook stays on Drive, so
+   reopen it when you need it again.
 
 ## Traps
 
@@ -104,6 +107,7 @@ Each of these has wasted real units.
 | Training straight from the Drive mount | Slow file reads starve the GPU | Copy data to `/content` first |
 | OpenGL or EGL rendering on a GPU runtime | Colab's image renders on the CPU (Mesa) | Install NVIDIA's GL libraries matching the driver (notebook.md) |
 | Closing the tab to stop a job | The runtime keeps billing | `colab.cjs stop TAB`, then check that `status` says "no runtime" |
+| Leaving the tab open after the job | An idle Colab or Drive page keeps growing, to gigabytes over a day, taking memory from everything else on the machine | Once `status` says "no runtime" and the results are copied, close the tab |
 | Nobody answers the Drive-for-desktop sign-in window | `drive.mount` fails after about 2 minutes and the runtime idles | Be ready to click, or use a standing grant; stop the runtime if the mount failed |
 
 ## Red flags

@@ -28,6 +28,8 @@
 //                                              drive-desktop-oauth, go on through each screen of the sign-in window
 //   node colab.cjs popups [--close]            the Google sign-in windows open, with the tab that opened each;
 //                                              --close closes them all, but only while no tab is mounting Drive
+//   node colab.cjs cli-signin [--dry-run]      sign the Colab CLI in: open its sign-in link in this browser, click
+//                                              through the screens a colab-cli-signin grant covers, paste the code
 //
 // TAB is a substring of the tab title (e.g. the notebook's file name) that must match exactly one Colab tab.
 // KIND is drive-mount, drive-desktop-oauth (Google's Drive-for-desktop sign-in window), or colab-secret:NAME.
@@ -111,6 +113,105 @@ function matchConsent(kind, screen, account) {
   }
   if (screen.count !== 1) return { ok: false, reason: `expected one "${spec.button}" button, found ${screen.count}` };
   return { ok: true, button: spec.button, where: spec.where };
+}
+
+// The Colab CLI's own sign-in (kind colab-cli-signin), seen in the automation browser: an account chooser,
+// "You're signing back in to Google Auth Library", "Google Auth Library wants access to your Google Account",
+// then Google's page with the code to paste into the CLI. The chooser is covered here only, and only when it
+// offers exactly one account (the grant's, if it names one). Password and 2-step pages are never covered.
+const CLI_CODE_PAGE = 'https://sdk.cloud.google.com/applicationdefaultauthcode.html';
+const CLI_APP = /Google Auth Library/;
+function matchCliSignin(screen, account) {
+  const text = screen.text || '';
+  if (String(screen.url || '').startsWith(CLI_CODE_PAGE)) {
+    const m = /\b4\/0[A-Za-z0-9_-]{20,}/.exec(text);
+    return m ? { ok: true, action: 'code', code: m[0] } : { ok: false, reason: 'the code page shows no code' };
+  }
+  for (const r of NEVER.filter((x) => !/choose/.test(x.source))) if (r.test(text)) return { ok: false, reason: `a screen no grant covers (${r.source})` };
+  if (!CLI_APP.test(text)) return { ok: false, reason: 'not the Colab CLI sign-in (no "Google Auth Library")' };
+  if (/choose an account/i.test(text)) {
+    const ids = (screen.tiles || []).map((t) => String(t).toLowerCase());
+    if (ids.length !== 1) return { ok: false, reason: `the chooser offers ${ids.length} accounts, not exactly one` };
+    if (account && ids[0] !== account.toLowerCase()) return { ok: false, reason: 'the chooser offers a different account than the grant' };
+    return { ok: true, action: 'tile' };
+  }
+  if (!/signing back in to Google Auth Library|Google Auth Library wants access to your Google Account/.test(text)) {
+    return { ok: false, reason: 'an unknown screen of the sign-in' };
+  }
+  if (screen.unchecked) return { ok: false, reason: `the screen asks which access to give (${screen.unchecked} unticked boxes)` };
+  const emails = (text.match(/[\w.+-]+@[\w-]+(\.[\w-]+)+/g) || []).map((e) => e.toLowerCase());
+  if (account && emails.length && !emails.includes(account.toLowerCase())) {
+    return { ok: false, reason: 'the screen shows a different account than the grant' };
+  }
+  if (screen.count !== 1) return { ok: false, reason: `expected one "Continue" button, found ${screen.count}` };
+  return { ok: true, action: 'button', button: 'Continue' };
+}
+
+// Sign the Colab CLI in: run `colab sessions`, open the link it prints in the automation browser (never the
+// user's own browser), click through the screens matchCliSignin allows, and paste the code into the CLI.
+async function cliSignin(dry) {
+  const grant = findGrant(readPermissions(), 'colab-cli-signin', 'colab-cli');
+  if (!grant) { console.log('NOT ALLOWED colab-cli-signin: no standing grant; ask the user to sign the CLI in'); return 3; }
+  const { spawn } = require('child_process');
+  const child = spawn(process.env.COLAB_BIN || 'colab', ['sessions'], { env: { ...process.env, BROWSER: 'true' } });
+  let out = '';
+  child.stdout.on('data', (d) => { out += d; });
+  child.stderr.on('data', (d) => { out += d; });
+  const exited = new Promise((r) => child.on('close', r));
+  const url = await new Promise((resolve) => {
+    const t = setInterval(() => {
+      const m = /https:\/\/accounts\.google\.com\/o\/oauth2\/auth\S+/.exec(out);
+      if (m) { clearInterval(t); resolve(m[0]); }
+    }, 300);
+    exited.then(() => { clearInterval(t); resolve(null); });
+    setTimeout(() => { clearInterval(t); resolve(null); }, 60000);
+  });
+  if (!url) {
+    if (child.exitCode === 0) { console.log('already signed in: colab sessions ran without asking'); return 0; }
+    child.kill();
+    console.log('NOT DONE: the CLI printed no sign-in link; its output:\n' + out.slice(-500));
+    return 4;
+  }
+  const browser = await connect();
+  const page = await browser.contexts()[0].newPage();
+  const giveUp = async (why) => {
+    child.kill();
+    console.log(`NOT DONE: ${why}. The sign-in page is left open in the automation browser; ask the user to finish`
+      + ' it there and paste the code, or to run  colab sessions  in their own terminal');
+    await browser.close();
+    return 4;
+  };
+  await page.goto(url);
+  for (let step = 0; step < 6; step++) {
+    await page.waitForTimeout(3000);
+    const screen = await readScreen(page, 'Continue');
+    screen.url = page.url();
+    screen.tiles = await page.evaluate(() => [...document.querySelectorAll('[data-identifier]')]
+      .map((e) => e.getAttribute('data-identifier')));
+    screen.unchecked = await uncheckedBoxes(page);
+    const m = matchCliSignin(screen, grant.account);
+    if (!m.ok) return giveUp(m.reason);
+    if (dry) {
+      console.log(`would ${m.action === 'tile' ? 'choose the one account offered' : m.action === 'code' ? 'paste the code' : 'click "Continue"'}`);
+      child.kill();
+      await page.close();
+      await browser.close();
+      return 0;
+    }
+    if (m.action === 'code') {
+      child.stdin.write(m.code + '\n');
+      await page.close();
+      const rc = await Promise.race([exited, new Promise((r) => setTimeout(() => r('timeout'), 60000))]);
+      await browser.close();
+      if (rc !== 0) { child.kill(); console.log(`NOT DONE: the CLI did not accept the code (exit ${rc}):\n${out.slice(-300)}`); return 4; }
+      console.log(logClick('colab-cli-signin', 'colab-cli', `signed in (grant of ${grant.granted || 'unknown date'})`));
+      return 0;
+    }
+    if (m.action === 'tile') await page.locator('[data-identifier]').first().click();
+    else await page.getByRole('button', { name: 'Continue', exact: true }).click();
+    console.log(logClick('colab-cli-signin', 'colab-cli', m.action === 'tile' ? 'chose the one account offered' : 'clicked "Continue"'));
+  }
+  return giveUp('still not at the code page after 6 screens');
 }
 
 async function readScreen(page, button) {
@@ -448,6 +549,7 @@ async function main() {
     console.log(logClick(kind, notebook, note.join(' ')));
     return;
   }
+  if (cmd === 'cli-signin') process.exit(await cliSignin(args[0] === '--dry-run'));
   const browser = await connect();
   const pages = colabPages(browser);
   const states = [];
@@ -507,4 +609,4 @@ async function main() {
 }
 
 if (require.main === module) main().catch((e) => { console.error(e); process.exit(1); });
-module.exports = { isDisconnected, parseFlags, findGrant, matchConsent, screenFor, bareName, tabPolicy };
+module.exports = { isDisconnected, parseFlags, findGrant, matchConsent, matchCliSignin, screenFor, bareName, tabPolicy };

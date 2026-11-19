@@ -23,7 +23,7 @@
     },
     {
       "name": "colab-browser",
-      "description": "Run GPU jobs on Google Colab through a browser the user signs in to: notebooks that finish and release their runtime on their own, a watch loop that stops idle runtimes, and checks before stopping anything",
+      "description": "Run GPU jobs on Google Colab with the official colab CLI, and a signed-in browser as backup: jobs that release their runtime on their own, a watch that stops idle sessions, and checks before stopping anything",
       "source": "./",
       "strict": false,
       "skills": ["./skills/colab-browser"]

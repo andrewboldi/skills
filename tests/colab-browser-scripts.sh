@@ -20,7 +20,7 @@ node --check "$s/colab.cjs"
 check "colab.cjs parses" 0 $?
 node "$s/colab.cjs" help > "$D/help"
 check "colab.cjs help exits 0" 0 $?
-check "help lists the commands" 8 "$(grep -cE '^  node colab.cjs (status|outputs|stop|watch|allowed|logclick|consent|popups)' "$D/help")"
+check "help lists the commands" 9 "$(grep -cE '^  node colab.cjs (status|outputs|stop|watch|allowed|logclick|consent|popups|cli-signin)' "$D/help")"
 
 rule() { node -e 'const c = require(process.argv[1]); console.log(c.isDisconnected(process.argv[2]))' "$s/colab.cjs" "$1"; }
 check "Reconnect means no runtime" true "$(rule 'Reconnect L4 arrow_drop_down')"
@@ -93,6 +93,79 @@ check "a * grant does not make every tab managed" warn "$(pol 'anything.ipynb' '
 check "--only manages the listed tab" manage "$(pol 'eval.ipynb' '["--only","eval"]')"
 check "--only skips the rest" ignore "$(pol 'train.ipynb' '["--only","eval"]')"
 check "--ignore wins over the permissions file" ignore "$(pol 'train.ipynb' '["--ignore","train"]')"
+
+# The Colab CLI's sign-in screens, as the automation browser shows them.
+ms() { node -e 'const c = require(process.argv[1]); const s = JSON.parse(process.argv[2]); const r = c.matchCliSignin(s, process.argv[3] || undefined); console.log(r.ok ? r.action + (r.code ? ":" + r.code : "") : "no")' "$s/colab.cjs" "$@"; }
+chooser='"text": "Sign in with Google Choose an account to continue to Google Auth Library User user@example.com Use another account"'
+check "a one-account chooser for the CLI: choose it" tile "$(ms "{$chooser, \"tiles\": [\"user@example.com\"]}")"
+check "a two-account chooser: no" no "$(ms "{$chooser, \"tiles\": [\"user@example.com\", \"other@example.com\"]}")"
+check "the chooser must offer the grant's account" no "$(ms "{$chooser, \"tiles\": [\"other@example.com\"]}" user@example.com)"
+check "another app's chooser: no" no "$(ms '{"text": "Choose an account to continue to Photo Sync", "tiles": ["user@example.com"]}')"
+check "signing back in to the CLI's app: Continue" button "$(ms '{"text": "You'"'"'re signing back in to Google Auth Library user@example.com Cancel Continue", "count": 1}')"
+check "the CLI's access screen: Continue" button "$(ms '{"text": "Google Auth Library wants access to your Google Account user@example.com Cancel Continue", "count": 1, "unchecked": 0}' user@example.com)"
+check "unticked access boxes: no" no "$(ms '{"text": "Google Auth Library wants access to your Google Account Cancel Continue", "count": 1, "unchecked": 2}')"
+check "a password page: no" no "$(ms '{"text": "Google Auth Library Enter your password", "count": 1}')"
+check "the Drive-for-desktop screen is not the CLI's" no "$(ms '{"text": "You'"'"'re signing back in to Google Drive for desktop Cancel Continue", "count": 1}')"
+check "the code page gives the code" "code:4/0AbCdEfGhIjKlMnOpQrStUvWxYz012" "$(ms '{"url": "https://sdk.cloud.google.com/applicationdefaultauthcode.html?state=x", "text": "Enter the following authorization code 4/0AbCdEfGhIjKlMnOpQrStUvWxYz012 Copy"}')"
+check "a code page with no code: no" no "$(ms '{"url": "https://sdk.cloud.google.com/applicationdefaultauthcode.html", "text": "Something went wrong"}')"
+
+# colab_job.py, run locally with a stand-in google.colab.runtime that records the release.
+python3 -m py_compile "$s/colab_job.py"
+check "colab_job.py compiles" 0 $?
+mkdir -p "$D/py/google/colab"
+: > "$D/py/google/__init__.py"
+: > "$D/py/google/colab/__init__.py"
+printf 'import os\ndef unassign():\n    open(os.environ["JOB_DIR"] + "/RELEASED", "w").write("x")\n' > "$D/py/google/colab/runtime.py"
+job() { rm -rf "$D/jd"; env PYTHONPATH="$D/py" JOB_DIR="$D/jd" JOB_CWD="$D" GRACE_MIN=0 "$@" python3 "$s/colab_job.py" > "$D/job.out" 2>&1; }
+job JOB_CMD='echo hello from the job'
+check "a job that succeeds is DONE" DONE "$(cat "$D/jd/STATUS")"
+check "its output is in the log" 1 "$(grep -c '^hello from the job$' "$D/jd/log.txt")"
+check "and it releases the runtime" 1 "$(ls "$D/jd/RELEASED" 2> /dev/null | wc -l | tr -d ' ')"
+job JOB_CMD='exit 3'
+check "a job that fails says FAILED rc=N" "FAILED rc=3" "$(cat "$D/jd/STATUS")"
+check "and still releases the runtime" 1 "$(ls "$D/jd/RELEASED" 2> /dev/null | wc -l | tr -d ' ')"
+job JOB_CMD='true' KEEP_RUNTIME=1
+check "KEEP_RUNTIME=1 keeps the runtime" 0 "$(ls "$D/jd/RELEASED" 2> /dev/null | wc -l | tr -d ' ')"
+job JOB_CMD='true' JOB_CWD="$D/missing"
+check "a job that cannot start is FAILED" FAILED "$(cat "$D/jd/STATUS")"
+check "with the reason in its log" 1 "$(grep -c '^\[error\] FileNotFoundError' "$D/jd/log.txt")"
+check "and still releases the runtime" 1 "$(ls "$D/jd/RELEASED" 2> /dev/null | wc -l | tr -d ' ')"
+
+# cli-watch.sh against a fake colab: sessions from a file, the job probe from a file, stops logged.
+F=$D/fake
+mkdir -p "$F"
+cat > "$F/colab" << 'EOF2'
+#!/usr/bin/env bash
+F=$(dirname "$0")
+case "$1" in
+sessions) cat "$F/sessions" ;;
+ssh) [ -f "$F/probe" ] && cat "$F/probe" || exit 1 ;;
+stop) echo "$3" >> "$F/stops"; [ -f "$F/stopfails" ] || sed -i.bak "/^\[$3\] /d" "$F/sessions" ;;
+esac
+EOF2
+chmod +x "$F/colab"
+w() { COLAB_BIN="$F/colab" COLAB_WATCH_STATE="$F/state" bash "$s/cli-watch.sh" "$@" --poll-s 0; }
+fresh() { rm -f "$F/state" "$F/stops" "$F/stopfails" "$F/probe"; printf '[?] gpu-a100-x | Hardware: A100\n[job] m-s-1 | Hardware: CPU\n' > "$F/sessions"; }
+fresh; echo 'DONE|30' > "$F/probe"
+check "a finished job is reported" "FINISHED job DONE" "$(w job)"
+check "and only once: the next watch waits for GONE" "GONE job" "$(sed -i.bak '/^\[job\]/d' "$F/sessions"; w job)"
+fresh; echo 'FAILED rc=1|30' > "$F/probe"
+check "a failed job is reported with its status" "FINISHED job FAILED rc=1" "$(w job)"
+fresh; echo 'RUNNING|1000' > "$F/probe"
+check "a stale heartbeat is QUIET" "QUIET job 16" "$(w job --quiet-min 15)"
+fresh; echo 'NOJOB|0' > "$F/probe"
+check "a session with no job is stopped once idle" "IDLE_STOPPED job" "$(w job --idle-min 0)"
+check "only the named session was stopped" job "$(cat "$F/stops")"
+fresh; echo 'NOJOB|0' > "$F/probe"; touch "$F/stopfails"
+check "a failed stop is reported" "STOP_FAILED job" "$(w job --idle-min 0)"
+fresh
+check "no ssh contact three times is reported" "NO_CONTACT job" "$(w job)"
+fresh
+check "a session that is not listed is GONE" "GONE other" "$(w other)"
+bash "$s/cli-watch.sh" --help > /dev/null
+check "cli-watch.sh --help exits 0" 0 $?
+bash "$s/cli-watch.sh" job --bogus > /dev/null 2>&1
+check "cli-watch.sh: an unknown option exits 2" 2 $?
 
 echo "colab-browser scripts: $pass passed, $fail failed"
 [ "$fail" = 0 ]

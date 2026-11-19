@@ -55,18 +55,25 @@ field in one PDF, in the style of Evan Chen's *An Infinitely Large Napkin*.
 - **A LaTeX template and checks.** `tools/check.sh` builds the book and fails on unresolved
   citations, broken references and unwritten sections.
 
-**[colab-browser](skills/colab-browser/SKILL.md)** runs GPU jobs on Google Colab through a real
-browser that you sign in to.
-- **You sign in and give consent; the agent does the rest.** It opens its own browser profile and
-  asks you to sign in, then builds and runs the notebook. It never clicks a consent or licence
-  button for you.
+**[colab-browser](skills/colab-browser/SKILL.md)** runs GPU jobs on Google Colab with Google's
+official `colab` CLI, and falls back to a real browser you sign in to for notebooks and Drive.
+- **Jobs that look after themselves.** A small runner inside the VM streams the job's log, writes a
+  heartbeat with GPU use, stops at a deadline, and releases the runtime when the job is done, even if
+  the agent is gone.
 - **No wasted compute units.**
-  - Every notebook streams its output, prints a heartbeat with GPU use, saves results to Drive as
-    they finish, and releases its runtime by itself.
-  - A watch loop stops runtimes that sit idle.
+  - A watch script reports finished, quiet and lost jobs, and stops sessions that sit idle.
+  - It never touches runtimes it didn't start.
   - It checks the job's own evidence before stopping anything that is running.
-- **The traps that cost units:** invisible subprocess output, Drive's caching and lag, settings
-  sized for the wrong GPU, and CPU-only rendering.
+- **Sign-in on your terms.** The agent never opens your everyday browser. It clicks a sign-in or
+  consent screen only when you've given a standing permission for that screen, matches the screen
+  exactly, and logs every click.
+- **The traps, measured:**
+  - `colab status` reports the CLI's own record, not the VM;
+  - `colab upload` fails on large files;
+  - a killed `colab run` leaves the VM billing;
+  - Drive lags and caches files;
+  - settings get sized for the wrong GPU;
+  - rendering runs on the CPU.
 
 ## Install
 

@@ -69,8 +69,10 @@ disagree, test on a CPU runtime before spending GPU units.
   "Credentials propagated" and "Mounted at /content/drive".
 - **Each new runtime asks again.**
 - **The exit code.** `drivemount` exits 0 even when the mount failed, so look for "Mounted at".
-- **Automated.** `colab.cjs cli-drivemount NAME` does the whole flow. Tested on a fresh CPU runtime:
-  mounted, and the VM listed MyDrive.
+- **Automated.** `colab.cjs cli-drivemount NAME` does the whole flow. On a fresh CPU runtime it clicked two
+  Continue screens and the VM listed MyDrive. A `colab_job.py` job then wrote a file to
+  `MyDrive/...`, the runner flushed Drive and released the VM, and the file was in Drive when checked
+  from outside a minute later.
 - **The first failure, explained.** The first test failed with "Error propagating: 400" because its helper
   script picked the newest Google sign-in window. That window belonged to another notebook mounting Drive
   at the same moment, so this mount's consent was never given. Retrying in that same kernel failed at

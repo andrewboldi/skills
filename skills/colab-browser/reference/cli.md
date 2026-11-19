@@ -82,9 +82,13 @@ disagree, test on a CPU runtime before spending GPU units.
 | `JOB_CMD` | (required) | the shell command |
 | `JOB_CWD` | `/content` | where it runs |
 | `JOB_DIR` | `/content/job` | `log.txt`, `heartbeat`, `STATUS`, and `COLLECTED`, which the agent creates |
-| `MAX_HOURS` | 3.5 | deadline; the job is terminated after it |
+| `MAX_HOURS` | 3.5 | deadline; the job's whole process group gets SIGTERM, then SIGKILL after 30 s |
 | `GRACE_MIN` | 20 | how long to wait for `COLLECTED` before releasing anyway |
 | `KEEP_RUNTIME` | unset | 1 skips the release, only while someone works in the session by hand |
+| `HEARTBEAT_S` | 120 | seconds between heartbeats |
+
+`JOB_DIR/heartbeat` shows that the runner is alive. `JOB_DIR/output` is touched whenever the job itself
+prints. The watch reads both: a silent job is QUIET, and a dead runner is NO_HEARTBEAT.
 
 The runner always releases the runtime in a `finally`, even when the job can't start; the reason goes
 in the log.

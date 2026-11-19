@@ -119,6 +119,7 @@ printf 'import os\ndef unassign():\n    open(os.environ["JOB_DIR"] + "/RELEASED"
 job() { rm -rf "$D/jd"; env PYTHONPATH="$D/py" JOB_DIR="$D/jd" JOB_CWD="$D" GRACE_MIN=0 "$@" python3 "$s/colab_job.py" > "$D/job.out" 2>&1; }
 job JOB_CMD='echo hello from the job'
 check "a job that succeeds is DONE" DONE "$(cat "$D/jd/STATUS")"
+check "the job's output time is recorded for the watch" 1 "$(ls "$D/jd/output" 2> /dev/null | wc -l | tr -d ' ')"
 check "its output is in the log" 1 "$(grep -c '^hello from the job$' "$D/jd/log.txt")"
 check "and it releases the runtime" 1 "$(ls "$D/jd/RELEASED" 2> /dev/null | wc -l | tr -d ' ')"
 job JOB_CMD='exit 3'
@@ -126,6 +127,15 @@ check "a job that fails says FAILED rc=N" "FAILED rc=3" "$(cat "$D/jd/STATUS")"
 check "and still releases the runtime" 1 "$(ls "$D/jd/RELEASED" 2> /dev/null | wc -l | tr -d ' ')"
 job JOB_CMD='true' KEEP_RUNTIME=1
 check "KEEP_RUNTIME=1 keeps the runtime" 0 "$(ls "$D/jd/RELEASED" 2> /dev/null | wc -l | tr -d ' ')"
+# The deadline must stop the whole job, not just the shell: a pipeline and a ';' list both outlive a SIGTERM to sh.
+for cmd in 'sleep 1; sleep 307' 'sleep 307 | cat'; do
+	t0=$(date +%s)
+	job JOB_CMD="$cmd" MAX_HOURS=0.0003 HEARTBEAT_S=1
+	check "the deadline ends '$cmd' within seconds" yes "$([ $(($(date +%s) - t0)) -lt 40 ] && echo yes || echo no)"
+	check "and says so in STATUS" "FAILED deadline 0.0003 h" "$(cat "$D/jd/STATUS")"
+	check "and leaves no process behind" 0 "$(pgrep -f '^sleep 307' | wc -l | tr -d ' ')"
+	check "and releases the runtime" 1 "$(ls "$D/jd/RELEASED" 2> /dev/null | wc -l | tr -d ' ')"
+done
 job JOB_CMD='true' JOB_CWD="$D/missing"
 check "a job that cannot start is FAILED" FAILED "$(cat "$D/jd/STATUS")"
 check "with the reason in its log" 1 "$(grep -c '^\[error\] FileNotFoundError' "$D/jd/log.txt")"
@@ -146,17 +156,21 @@ EOF2
 chmod +x "$F/colab"
 w() { COLAB_BIN="$F/colab" COLAB_WATCH_STATE="$F/state" bash "$s/cli-watch.sh" "$@" --poll-s 0; }
 fresh() { rm -f "$F/state" "$F/stops" "$F/stopfails" "$F/probe"; printf '[?] gpu-a100-x | Hardware: A100\n[job] m-s-1 | Hardware: CPU\n' > "$F/sessions"; }
-fresh; echo 'DONE|30' > "$F/probe"
+fresh; echo 'DONE|30|30' > "$F/probe"
 check "a finished job is reported" "FINISHED job DONE" "$(w job)"
 check "and only once: the next watch waits for GONE" "GONE job" "$(sed -i.bak '/^\[job\]/d' "$F/sessions"; w job)"
-fresh; echo 'FAILED rc=1|30' > "$F/probe"
+printf '[job] m-s-2 | Hardware: CPU\n' >> "$F/sessions"
+check "a new session reusing the name is reported again" "FINISHED job DONE" "$(w job)"
+fresh; echo 'FAILED rc=1|30|30' > "$F/probe"
 check "a failed job is reported with its status" "FINISHED job FAILED rc=1" "$(w job)"
-fresh; echo 'RUNNING|1000' > "$F/probe"
-check "a stale heartbeat is QUIET" "QUIET job 16" "$(w job --quiet-min 15)"
-fresh; echo 'NOJOB|0' > "$F/probe"
+fresh; echo 'RUNNING|1000|30' > "$F/probe"
+check "a job silent for --quiet-min is QUIET, though its runner beats" "QUIET job 16" "$(w job --quiet-min 15)"
+fresh; echo 'RUNNING|30|1000' > "$F/probe"
+check "a runner whose heartbeat stopped is NO_HEARTBEAT" "NO_HEARTBEAT job 16" "$(w job --dead-min 10)"
+fresh; echo 'NOJOB|0|0' > "$F/probe"
 check "a session with no job is stopped once idle" "IDLE_STOPPED job" "$(w job --idle-min 0)"
 check "only the named session was stopped" job "$(cat "$F/stops")"
-fresh; echo 'NOJOB|0' > "$F/probe"; touch "$F/stopfails"
+fresh; echo 'NOJOB|0|0' > "$F/probe"; touch "$F/stopfails"
 check "a failed stop is reported" "STOP_FAILED job" "$(w job --idle-min 0)"
 fresh
 check "no ssh contact three times is reported" "NO_CONTACT job" "$(w job)"
